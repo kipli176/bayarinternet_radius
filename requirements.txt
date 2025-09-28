@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+passlib[bcrypt]
+PyJWT
+python-multipart
+pydantic[email]
+requests
+passlib>=1.7.4
+bcrypt==3.2.2
+pyrad

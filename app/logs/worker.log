@@ -1,0 +1,8 @@
+2025-09-28 22:57:31,471 [INFO] apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-28 22:57:31,473 [INFO] apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-28 22:57:31,473 [INFO] apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-28 22:57:31,475 [INFO] apscheduler.scheduler: Added job "remind_users_before_expiry" to job store "default"
+2025-09-28 22:57:31,475 [INFO] apscheduler.scheduler: Added job "remind_users_end_of_month" to job store "default"
+2025-09-28 22:57:31,475 [INFO] apscheduler.scheduler: Added job "mark_overdue_invoices" to job store "default"
+2025-09-28 22:57:31,475 [INFO] apscheduler.scheduler: Scheduler started
+2025-09-28 22:57:31,475 [INFO] worker: Worker started...

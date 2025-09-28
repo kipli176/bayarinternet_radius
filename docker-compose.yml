@@ -1,0 +1,32 @@
+services:
+  bayarinternet_api:
+    build: .
+    container_name: bayarinternet_api
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=kipli_user
+      - DB_PASSWORD=kipli_password
+      - DB_NAME=bayarinternet
+      - DB_PORT=5432
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+
+  bayarinternet_worker:
+    build: .
+    container_name: bayarinternet_worker
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=kipli_user
+      - DB_PASSWORD=kipli_password
+      - DB_NAME=bayarinternet
+      - DB_PORT=5432
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    command: ["python", "worker/main.py"]
