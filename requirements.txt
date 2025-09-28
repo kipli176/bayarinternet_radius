@@ -13,3 +13,4 @@ pyrad
 apscheduler
 pydantic<2.0
 python-dotenv
+pytz>=2023.3
