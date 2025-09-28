@@ -10,9 +10,7 @@ services:
       - DB_USER=kipli_user
       - DB_PASSWORD=kipli_password
       - DB_NAME=bayarinternet
-      - DB_PORT=5432
-    ports:
-      - "8000:8000"
+      - DB_PORT=5432 
     volumes:
       - .:/app
 
