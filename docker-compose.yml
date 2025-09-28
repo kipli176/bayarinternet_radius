@@ -2,6 +2,7 @@ services:
   bayarinternet_api:
     build: .
     container_name: bayarinternet_api
+    restart: unless-stopped
     depends_on:
       - postgres
     environment:
@@ -18,6 +19,7 @@ services:
   bayarinternet_worker:
     build: .
     container_name: bayarinternet_worker
+    restart: unless-stopped
     depends_on:
       - postgres
     environment:
@@ -30,3 +32,7 @@ services:
       - .:/app
       - ./logs:/app/logs
     command: ["python", "worker/main.py"]
+
+networks:
+  cloudflared:
+    external: true
