@@ -1,32 +1,38 @@
-# app/utils/coa.py
 import socket
 import struct
+import hashlib
 
-# RADIUS dictionary basics
 RADIUS_CODE_DISCONNECT_REQUEST = 40
 RADIUS_CODE_DISCONNECT_ACK = 41
 RADIUS_CODE_DISCONNECT_NAK = 42
 
 def build_radius_packet(code: int, identifier: int, secret: str, attrs: list):
     """
-    Build a simple RADIUS packet for Disconnect-Request.
+    Build a valid RADIUS Disconnect-Request packet.
     attrs: list of (type, value) tuples.
     """
-    # start with header
-    packet = struct.pack("!BBH", code, identifier, 0)  # code, id, length placeholder
+    # header awal (panjang masih placeholder)
+    header = struct.pack("!BBH", code, identifier, 0)
     authenticator = b"\x00" * 16
-    packet += authenticator
+    packet = header + authenticator
 
-    # append attributes
+    # tambahkan atribut
     for attr_type, value in attrs:
         if isinstance(value, str):
             value = value.encode()
         packet += struct.pack("!BB", attr_type, len(value) + 2) + value
 
-    # fix length
+    # perbaiki length
     length = len(packet)
     packet = packet[:2] + struct.pack("!H", length) + packet[4:]
+
+    # hitung authenticator: MD5(Code+ID+Length+16x0+Attrs+Secret)
+    auth = hashlib.md5(packet + secret.encode()).digest()
+
+    # ganti authenticator dummy dengan MD5
+    packet = packet[:4] + auth + packet[20:]
     return packet
+
 
 
 def disconnect_user(username: str, nas_ip: str, secret: str, port: int = 3799, timeout: int = 3):
