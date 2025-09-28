@@ -11,6 +11,9 @@ services:
       - DB_PORT=5432 
     volumes:
       - .:/app
+    networks:
+      - cloudflared
+
 
   bayarinternet_worker:
     build: .
@@ -26,6 +29,9 @@ services:
       - .:/app
       - ./logs:/app/logs
     command: ["python", "-m worker/main.py"]
+    networks:
+      - cloudflared
+
 
 networks:
   cloudflared:
