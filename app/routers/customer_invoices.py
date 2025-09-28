@@ -52,7 +52,7 @@ def create_customer_invoice(payload: CustomerInvoiceCreate, db: Session = Depend
     return invoice
 
 # 📋 daftar invoice customer milik reseller
-@router.get("/", response_model=List[CustomerInvoiceResponse])
+@router.get("", response_model=List[CustomerInvoiceResponse])
 def list_customer_invoices(db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     return db.query(models.customer_invoice.CustomerInvoice).filter(
         models.customer_invoice.CustomerInvoice.reseller_id == reseller.id

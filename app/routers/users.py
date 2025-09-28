@@ -61,7 +61,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), reseller=Dep
     return user
 
 # 📋 daftar PPP user
-@router.get("/", response_model=List[UserResponse])
+@router.get("", response_model=List[UserResponse])
 def list_users(
     status: Optional[str] = Query(None, description="active/suspended/expired"),
     db: Session = Depends(get_db),

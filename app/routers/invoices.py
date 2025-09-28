@@ -19,7 +19,7 @@ from app.routers.resellers import get_current_reseller
 router = APIRouter()
 
 # 📋 daftar invoice reseller
-@router.get("/", response_model=List[InvoiceResponse])
+@router.get("", response_model=List[InvoiceResponse])
 def list_invoices(db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     return db.query(models.invoice.Invoice).filter(
         models.invoice.Invoice.reseller_id == reseller.id

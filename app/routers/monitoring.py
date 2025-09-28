@@ -10,7 +10,7 @@ from app.routers.resellers import get_current_reseller
 router = APIRouter()
 
 # 📋 daftar session aktif
-@router.get("/", response_model=List[SessionResponse])
+@router.get("", response_model=List[SessionResponse])
 def list_active_sessions(
     db: Session = Depends(get_db), reseller=Depends(get_current_reseller)
 ):

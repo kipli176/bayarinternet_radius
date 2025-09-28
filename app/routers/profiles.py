@@ -39,7 +39,7 @@ def create_profile(payload: ProfileCreate, db: Session = Depends(get_db), resell
     return profile
 
 # 📋 daftar semua profil reseller
-@router.get("/", response_model=List[ProfileResponse])
+@router.get("", response_model=List[ProfileResponse])
 def list_profiles(db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     return db.query(models.profile.PPPProfile).filter(
         models.profile.PPPProfile.reseller_id == reseller.id,
