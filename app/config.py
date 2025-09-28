@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     DB_USER: str = "kipli_user"
     DB_PASSWORD: str = "kipli_password"
     DB_NAME: str = "bayarinternet"
-    DB_PORT: int = 5432
+    DB_PORT: int = 15432
 
     class Config:
         env_file = ".env"

@@ -28,7 +28,7 @@ def create_router(payload: RouterCreate, db: Session = Depends(get_db), reseller
     return router_obj
 
 # 📋 daftar semua router reseller
-@router.get("/", response_model=List[RouterResponse])
+@router.get("", response_model=List[RouterResponse])
 def list_routers(db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     return db.query(models.router.MikrotikRouter).filter(
         models.router.MikrotikRouter.reseller_id == reseller.id,
