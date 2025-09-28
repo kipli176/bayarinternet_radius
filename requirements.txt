@@ -11,3 +11,5 @@ passlib>=1.7.4
 bcrypt==3.2.2
 pyrad
 apscheduler
+pydantic-settings>=2.0.0
+python-dotenv
