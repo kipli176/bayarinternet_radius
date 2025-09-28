@@ -28,7 +28,7 @@ services:
     volumes:
       - .:/app
       - ./logs:/app/logs
-    command: ["python", "-m worker/main.py"]
+    command: ["python", "-m worker.main"]
     networks:
       - cloudflared
 
