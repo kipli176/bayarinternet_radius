@@ -9,29 +9,32 @@ RADIUS_CODE_DISCONNECT_ACK = 41
 RADIUS_CODE_DISCONNECT_NAK = 42
 
 def build_radius_packet(code: int, identifier: int, secret: str, attrs: list):
-    # random 16-byte authenticator
-    ra = os.urandom(16)
+    # 16-byte random authenticator
+    request_auth = os.urandom(16)
 
-    # header (length=0 placeholder)
-    packet = struct.pack("!BBH", code, identifier, 0) + ra
+    # header with placeholder length
+    packet = struct.pack("!BBH", code, identifier, 0) + request_auth
 
     # append attributes
+    attr_bytes = b""
     for attr_type, value in attrs:
         if isinstance(value, str):
             value = value.encode()
-        packet += struct.pack("!BB", attr_type, len(value) + 2) + value
+        attr = struct.pack("!BB", attr_type, len(value) + 2) + value
+        attr_bytes += attr
 
-    # set length
-    length = len(packet)
-    packet = packet[:2] + struct.pack("!H", length) + packet[4:]
+    # full packet before authenticator
+    length = 20 + len(attr_bytes)
+    packet = struct.pack("!BBH", code, identifier, length) + request_auth + attr_bytes
 
-    # calculate authenticator properly
-    hash_input = packet[:4] + ra + packet[20:] + secret.encode()
+    # calculate authenticator: MD5(Code+ID+Length+RA+Attributes+Secret)
+    hash_input = packet[:4] + request_auth + attr_bytes + secret.encode()
     authenticator = hashlib.md5(hash_input).digest()
 
-    # rebuild with real authenticator
-    packet = packet[:4] + authenticator + packet[20:]
-    return packet
+    # rebuild packet with correct authenticator
+    final_packet = packet[:4] + authenticator + attr_bytes
+    return final_packet
+
 
 def disconnect_user(username: str, nas_ip: str, secret: str, port: int = 3799, timeout: int = 3):
     identifier = os.urandom(1)[0]
