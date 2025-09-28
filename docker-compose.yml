@@ -2,9 +2,7 @@ services:
   bayarinternet_api:
     build: .
     container_name: bayarinternet_api
-    restart: unless-stopped
-    depends_on:
-      - postgres
+    restart: unless-stopped 
     environment:
       - DB_HOST=postgres
       - DB_USER=kipli_user
@@ -17,9 +15,7 @@ services:
   bayarinternet_worker:
     build: .
     container_name: bayarinternet_worker
-    restart: unless-stopped
-    depends_on:
-      - postgres
+    restart: unless-stopped 
     environment:
       - DB_HOST=postgres
       - DB_USER=kipli_user
