@@ -132,8 +132,8 @@ def update_user(
     db.commit()
     db.refresh(user)
 
-    # jika status diubah jadi suspended/disable → coba disconnect di semua router reseller
-    if payload.status and payload.status.lower() in ["suspended", "disabled"]:
+    # jika status diubah jadi suspended/disable → coba disconnect di semua router reseller    
+    if payload.status and payload.status.lower() in ["suspended", "expired", "disabled"]:
         routers = db.query(models.router.MikrotikRouter).filter(
             models.router.MikrotikRouter.reseller_id == reseller.id
         ).all()
