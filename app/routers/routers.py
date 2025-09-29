@@ -13,14 +13,21 @@ router = APIRouter()
 
 # ➕ tambah router baru
 @router.post("", response_model=RouterResponse)
-def create_router(payload: RouterCreate, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
+def create_router(
+    payload: RouterCreate,
+    db: Session = Depends(get_db),
+    reseller=Depends(get_current_reseller)
+):
+    # Jika mgmt_ip kosong → generate otomatis unik
+    if not payload.mgmt_ip:
+        count = db.query(models.router.MikrotikRouter).filter_by(
+            reseller_id=reseller.id
+        ).count()
+        payload.mgmt_ip = f"10.100.100.{count+1}"
+
     router_obj = models.router.MikrotikRouter(
-        reseller_id=reseller.id,
-        name=payload.name,
-        router_identity=payload.router_identity,
-        mgmt_ip=payload.mgmt_ip,
-        radius_secret=payload.radius_secret,
-        is_active=True,
+        **payload.dict(),
+        reseller_id=reseller.id
     )
     db.add(router_obj)
     db.commit()
