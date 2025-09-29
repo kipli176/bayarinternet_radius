@@ -5,7 +5,8 @@ from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import text
 
-from app.utils import coa, wa_gateway
+from app.utils import coa
+from app.utils.wa_gateway import send_whatsapp, format_user_created, format_user_activated
 from app.database import get_db
 from app import models
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
@@ -43,20 +44,9 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), reseller=Dep
     # cari profile info
     profile = db.query(models.profile.PPPProfile).filter(models.profile.PPPProfile.id == user.profile_id).first()
 
-    # buat pesan WA
-    msg = (
-        f"Halo {user.full_name or user.username},\n"
-        f"Akun internet Anda berhasil dibuat 🎉\n\n"
-        f"🔑 Username : {user.username}\n"
-        f"📡 Paket    : {profile.name if profile else '-'} "
-        f"({profile.burst_limit_up}/{profile.burst_limit_down})\n"
-        f"📅 Aktif sampai : {user.active_until.strftime('%d-%m-%Y') if user.active_until else '-'}\n\n"
-        f"Silakan tunggu teknisi datang.\n"
-        f"Terima kasih sudah menggunakan layanan kami 🙏"
-    )
-
+    msg = format_user_created(user, profile)
     if user.phone:
-        wa_gateway.send_whatsapp(user.phone, msg)
+        send_whatsapp(user.phone, msg) 
 
     return user
 
@@ -134,9 +124,16 @@ def update_user(
             except Exception as e:
                 print(f"Failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
 
+        # ➕ kirim WA jika status aktif
+        if payload.status == "active":
+            try:
+                if user.phone_number:  # pastikan ada nomor WA
+                    msg = format_user_activated(user)
+                    if user.phone:
+                        send_whatsapp(user.phone, msg)
+            except Exception as e:
+                print(f"Gagal kirim WhatsApp ke {user.username}: {e}")
     return user
-
-
 
 # ❌ hapus user (soft delete)
 @router.delete("/{user_id}")

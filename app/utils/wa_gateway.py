@@ -22,6 +22,27 @@ def send_whatsapp(number: str, message: str) -> bool:
     except Exception as e:
         print(f"WA error: {e}")
         return False
+    
+def format_user_created(user, profile) -> str:
+    return (
+        f"Halo {user.full_name or user.username},\n"
+        f"Akun internet Anda berhasil dibuat 🎉\n\n"
+        f"🔑 Username : {user.username}\n"
+        f"📡 Paket    : {profile.name if profile else '-'} "
+        f"({profile.burst_limit_up}/{profile.burst_limit_down})\n"
+        f"📅 Aktif sampai : {user.active_until.strftime('%d-%m-%Y') if user.active_until else '-'}\n\n"
+        f"Silakan tunggu teknisi datang.\n"
+        f"Terima kasih sudah menggunakan layanan kami 🙏"
+    )
+
+def format_user_activated(user) -> str:
+    return (
+        f"Halo {user.full_name or user.username},\n"
+        f"Akun internet Anda telah *aktif kembali* ✅\n\n"
+        f"🔑 Username : {user.username}\n"
+        f"📅 Berlaku sampai : {user.active_until.strftime('%d-%m-%Y') if user.active_until else '-'}\n\n"
+        f"Selamat berselancar 🌐"
+    )
 
 def format_invoice_paid_message(invoice, is_customer=False, user=None, profile=None):
     if is_customer and user and profile:
