@@ -88,7 +88,6 @@ def get_user(user_id: str, db: Session = Depends(get_db), reseller=Depends(get_c
     return user
 
 # ✏️ update PPP user
-# ✏️ update PPP user
 @router.patch("/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: str,
@@ -104,31 +103,32 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # update fields
+    # update fields biasa
     for key, value in payload.dict(exclude_unset=True).items():
         if key == "password":
             setattr(user, "password_hash", value)
-        else:
+        elif key not in ["suspended", "status"]:  # biar tidak overwrite logic khusus
             setattr(user, key, value)
 
-    # --- tambahan logic status ---
+    # --- logic suspended / expired / active ---
     if payload.suspended is True:
         user.suspended = True
         user.pool = "pool_isolir"
 
     elif payload.suspended is False:
         user.suspended = False
-        user.pool = payload.pool or user.pool  # kembalikan pool normal
+        # kembalikan ke pool normal (misalnya ikut dari paket/reseller)
+        if payload.pool:
+            user.pool = payload.pool
 
     if payload.status:
-        if payload.status.lower() == "expired":
+        status = payload.status.lower()
+        if status == "expired":
             user.disabled = True
             user.status = "expired"
-        else:
+        elif status == "active":
             user.disabled = False
             user.status = "active"
-
-            # jika diaktifkan kembali, munculkan log (nanti bisa ganti WA notif)
             print(f"[LOG] User {user.username} diaktifkan kembali oleh reseller {reseller.id}")
 
     # audit trigger
@@ -139,8 +139,8 @@ def update_user(
     db.commit()
     db.refresh(user)
 
-    # jika status diubah jadi suspended/disable → coba disconnect di semua router reseller
-    if payload.status and payload.status.lower() in ["suspended", "disabled", "expired"]:
+    # disconnect user kalau status berubah atau pool berubah
+    if (payload.suspended is not None) or (payload.status and payload.status.lower() in ["suspended", "disabled", "expired"]):
         routers = db.query(models.router.MikrotikRouter).filter(
             models.router.MikrotikRouter.reseller_id == reseller.id
         ).all()
@@ -151,11 +151,12 @@ def update_user(
                     nas_ip=str(r.mgmt_ip),
                     secret=r.radius_secret
                 )
-                print(f"Disconnect {user.username} @ {r.mgmt_ip}: {result}")
+                print(f"[COA] Disconnect {user.username} @ {r.mgmt_ip}: {result}")
             except Exception as e:
-                print(f"Failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
+                print(f"[COA] Failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
 
     return user
+
 
 # ❌ hapus user (soft delete)
 @router.delete("/{user_id}")
