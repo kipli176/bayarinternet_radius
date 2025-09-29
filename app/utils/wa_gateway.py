@@ -55,32 +55,39 @@ def format_invoice_generated_reseller(reseller, invoice) -> str:
         f"💵 Total Tagihan: {invoice.currency} {int(invoice.total):,}\n\n"
         f"Silakan lakukan pembayaran sebelum jatuh tempo 🙏"
     )
+def format_invoice_unpaid_message(invoice, user, profile):
+    months = invoice.meta.get("months") if invoice.meta else 1
+    period = f"{invoice.period_start.strftime('%d-%m-%Y')} s/d {invoice.period_end.strftime('%d-%m-%Y')}"
+    amount = f"Rp {int(invoice.amount):,}"
 
-def format_invoice_paid_message(invoice, is_customer=False, user=None, profile=None):
-    if is_customer and user and profile:
-        months_paid = max(1, round(invoice.amount / float(profile.price or 1)))
-        new_until = user.active_until.strftime("%d-%m-%Y") if user.active_until else "-"
+    msg = (
+        f"Halo {user.full_name or user.username},\n"
+        f"📢 Tagihan Internet Anda sudah terbit.\n\n"
+        f"📄 Paket: {profile.name}\n"
+        f"🗓️ Periode: {period} ({months} bulan)\n"
+        f"💰 Jumlah Tagihan: {amount}\n\n"
+        f"Silakan lakukan pembayaran sebelum jatuh tempo agar layanan tetap aktif.\n"
+        f"Terima kasih 🙏"
+    )
+    return msg
 
-        msg = (
-            f"Halo {user.full_name or user.username},\n"
-            f"✅ Pembayaran Internet Anda sudah diterima.\n\n"
-            f"📄 Paket: {profile.name}\n"
-            f"💰 Jumlah Dibayar: Rp {int(invoice.amount):,}\n"
-            f"🗓️ Periode: {months_paid} bulan\n"
-            f"📌 Aktif hingga: {new_until}\n\n"
-            f"Terima kasih telah mempercayai layanan kami 🙏"
-        )
-        return msg
-    else:
-        return (
-            f"Halo {user.name},\n"
-            f"💳 Invoice Reseller telah dibayar ✅\n\n"
-            f"👥 Jumlah User: {invoice.users_count}\n"
-            f"💰 Total: Rp {int(invoice.total):,}\n"
-            f"📅 Periode: {invoice.period_start.strftime('%d-%m-%Y')} s/d {invoice.period_end.strftime('%d-%m-%Y')}\n\n"
-            f"Terima kasih 🙏"
-        )
-    
+def format_invoice_paid_message(invoice, user, profile):
+    months_paid = invoice.meta.get("months") if invoice.meta else 1
+    new_until = user.active_until.strftime("%d-%m-%Y") if user.active_until else "-"
+    amount = f"Rp {int(invoice.amount):,}"
+
+    msg = (
+        f"Halo {user.full_name or user.username},\n"
+        f"✅ Pembayaran Internet Anda sudah diterima.\n\n"
+        f"📄 Paket: {profile.name}\n"
+        f"💰 Jumlah Dibayar: {amount}\n"
+        f"🗓️ Periode: {months_paid} bulan\n"
+        f"📌 Aktif hingga: {new_until}\n\n"
+        f"Terima kasih telah mempercayai layanan kami 🙏"
+    )
+    return msg
+
+
 def format_reminder_active_until(user, profile):
     due = user.active_until.strftime("%d-%m-%Y") if user.active_until else "-"
     return (
