@@ -22,15 +22,13 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr]
     phone: Optional[str]
     status: Optional[str]   # active, suspended, expired
-    active_until: Optional[date]
-    suspended: Optional[bool] = None 
+    active_until: Optional[date] 
 
 class UserResponse(UserBase):
     id: UUID
     status: str
     active_until: Optional[date]
-    created_at: datetime
-    suspended: bool 
+    created_at: datetime 
 
     class Config:
         orm_mode = True
