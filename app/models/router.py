@@ -14,7 +14,7 @@ class MikrotikRouter(Base, TimestampMixin, SoftDeleteMixin):
 
     name = Column(String, nullable=False)
     router_identity = Column(String)
-    mgmt_ip = Column(INET, nullable=False, default="10.100.100.1")
+    mgmt_ip = Column(INET, nullable=False)
     radius_secret = Column(String, nullable=False)
 
     is_active = Column(Boolean, nullable=False, default=True)  # ✅ tetap dipakai
