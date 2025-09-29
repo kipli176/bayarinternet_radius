@@ -117,8 +117,8 @@ def update_user(
         if status == "suspended":
             # hanya pindahkan pool
             user.pool = "pool_isolir"
-            user.disabled = False   # pastikan tidak dianggap disable
-            user.status = "suspended"
+            user.suspended = True 
+            user.status = "active"  # tetap active, tapi suspended
 
         elif status == "expired":
             # expired benar-benar disable
@@ -126,6 +126,7 @@ def update_user(
             user.status = "disabled"
 
         elif status == "active":
+            user.suspended = False
             # jika diaktifkan kembali, munculkan log (nanti bisa ganti WA notif)
             print(f"[LOG] User {user.username} diaktifkan kembali oleh reseller {reseller.id}")
 

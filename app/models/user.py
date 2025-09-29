@@ -22,6 +22,7 @@ class PPPUser(Base, TimestampMixin, SoftDeleteMixin):
     status = Column(String, nullable=False, default="active")   # active, suspended, expired
     active_until = Column(DateTime(timezone=True))              # expiry date
 
+    suspended = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
 
     __table_args__ = (
