@@ -88,7 +88,6 @@ def get_user(user_id: str, db: Session = Depends(get_db), reseller=Depends(get_c
     return user
 
 # ✏️ update PPP user
-
 @router.patch("/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: str,
@@ -104,6 +103,9 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Simpan status lama
+    old_status = user.status
+
     # update fields
     for key, value in payload.dict(exclude_unset=True).items():
         if key == "password":
@@ -116,12 +118,11 @@ def update_user(
     db.commit()
     db.refresh(user)
 
-    # jika status diubah jadi suspended/disable → coba disconnect di semua router reseller
-    if payload.status and payload.status.lower() in ["suspended", "disabled"]:
+    # Cek jika ada perubahan status → lakukan disconnect
+    if payload.status and payload.status.lower() != old_status.lower():
         routers = db.query(models.router.MikrotikRouter).filter(
             models.router.MikrotikRouter.reseller_id == reseller.id
         ).all()
-        print(routers)
         for r in routers:
             try:
                 result = coa.disconnect_user(
@@ -131,9 +132,10 @@ def update_user(
                 )
                 print(f"Disconnect {user.username} @ {r.mgmt_ip}: {result}")
             except Exception as e:
-                print(f"Failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
+                print(f"Failed to disconnect {user.username} @ {r.mgmt_ip}: {e}")
 
     return user
+
 
 
 # ❌ hapus user (soft delete)
