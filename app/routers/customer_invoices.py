@@ -24,7 +24,7 @@ logger = logging.getLogger("app.routers.customer_invoices")
 router = APIRouter()
 
 # ➕ buat customer invoice
-@router.post("/", response_model=CustomerInvoiceResponse)
+@router.post("", response_model=CustomerInvoiceResponse)
 def create_customer_invoice(
     payload: CustomerInvoiceCreate,
     db: Session = Depends(get_db),
