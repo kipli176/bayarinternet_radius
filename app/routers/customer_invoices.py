@@ -25,36 +25,56 @@ router = APIRouter()
 
 # ➕ buat customer invoice
 @router.post("/", response_model=CustomerInvoiceResponse)
-def create_customer_invoice(payload: CustomerInvoiceCreate, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
-    # pastikan user milik reseller
+def create_customer_invoice(
+    payload: CustomerInvoiceCreate,
+    db: Session = Depends(get_db),
+    reseller=Depends(get_current_reseller),
+):
+    # pastikan user ada & milik reseller
     user = db.query(models.user.PPPUser).filter(
         models.user.PPPUser.id == payload.user_id,
-        models.user.PPPUser.reseller_id == reseller.id
+        models.user.PPPUser.reseller_id == reseller.id,
+        models.user.PPPUser.deleted_at.is_(None)
     ).first()
     if not user:
         return error_response("User not found", 404)
 
-    # ambil profil untuk harga default
-    profile = db.query(models.profile.PPPProfile).filter(models.profile.PPPProfile.id == payload.profile_id).first()
+    # ambil profil langsung dari user
+    if not user.profile_id:
+        return error_response("User does not have an assigned profile", 400)
+
+    profile = db.query(models.profile.PPPProfile).filter(
+        models.profile.PPPProfile.id == user.profile_id
+    ).first()
     if not profile:
         return error_response("Profile not found", 404)
 
-    amount = payload.amount or float(profile.price)
+    # jika amount tidak diberikan, gunakan harga profil
+    amount = payload.amount or profile.price
 
     invoice = models.customer_invoice.CustomerInvoice(
         reseller_id=reseller.id,
         user_id=user.id,
-        profile_id=profile.id,
+        profile_id=user.profile_id,
         period_start=payload.period_start,
         period_end=payload.period_end,
         amount=amount,
-        status="draft"
+        status="draft"   # default saat create
     )
+
     db.add(invoice)
-    db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)}) 
+    db.execute(
+        text("SELECT set_config('app.current_user', :uid, true)"),
+        {"uid": str(reseller.id)}
+    )
     db.commit()
     db.refresh(invoice)
-    return success_response(invoice, "Invoice created successfully", 201)
+
+    return success_response(
+        CustomerInvoiceResponse.from_orm(invoice),
+        "Customer invoice created successfully",
+        201
+    )
 
 # 📋 daftar invoice customer milik reseller
 @router.get("", response_model=List[CustomerInvoiceResponse])

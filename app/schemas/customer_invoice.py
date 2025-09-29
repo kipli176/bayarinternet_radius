@@ -12,7 +12,9 @@ class CustomerInvoiceBase(BaseModel):
 
 class CustomerInvoiceCreate(CustomerInvoiceBase):
     user_id: UUID
-    profile_id: UUID
+    period_start: datetime
+    period_end: datetime
+    amount: Decimal
 
 class CustomerInvoiceUpdate(BaseModel):
     status: Optional[str] = None
