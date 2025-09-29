@@ -12,12 +12,12 @@ class CustomerInvoice(Base, TimestampMixin):
 
     reseller_id = Column(UUID(as_uuid=True), ForeignKey("resellers.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("ppp_users.id", ondelete="CASCADE"), nullable=False)
-    profile_id = Column(UUID(as_uuid=True), ForeignKey("ppp_profiles.id", ondelete="SET NULL"))
+    profile_id = Column(UUID(as_uuid=True), ForeignKey("ppp_profiles.id", ondelete="SET NULL"), nullable=False)
 
     period_start = Column(DateTime(timezone=True), nullable=False)
     period_end = Column(DateTime(timezone=True), nullable=False)
 
-    amount = Column(Numeric(12, 2), nullable=False, default=0)
-    status = Column(String, nullable=False, default="draft")   # draft, sent, paid, overdue
+    amount = Column(Numeric(12, 2), nullable=False)
+    status = Column(String, nullable=False, default="unpaid")   # draft, sent, paid, overdue
     meta = Column(JSONB)
     paid_at = Column(DateTime(timezone=True), nullable=True)

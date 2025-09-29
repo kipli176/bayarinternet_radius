@@ -16,6 +16,10 @@ from app.schemas.customer_invoice import (
     CustomerInvoiceResponse
 )
 from app.routers.resellers import get_current_reseller
+from decimal import Decimal, ROUND_HALF_UP
+from app.utils import coa  # CoA untuk disconnect user
+import logging
+logger = logging.getLogger("app.routers.customer_invoices")
 
 router = APIRouter()
 
@@ -71,38 +75,34 @@ def get_customer_invoice(invoice_id: str, db: Session = Depends(get_db), reselle
     return success_response(invoice, "Customer invoice retrieved successfully")
 
 # ✏️ update status invoice customer
-
 @router.patch("/{invoice_id}", response_model=CustomerInvoiceResponse)
 def update_customer_invoice(
     invoice_id: str,
     payload: CustomerInvoiceUpdate,
     db: Session = Depends(get_db),
-    reseller=Depends(get_current_reseller)
+    reseller=Depends(get_current_reseller),
 ):
     invoice = db.query(models.customer_invoice.CustomerInvoice).filter(
         models.customer_invoice.CustomerInvoice.id == invoice_id,
-        models.customer_invoice.CustomerInvoice.reseller_id == reseller.id
+        models.customer_invoice.CustomerInvoice.reseller_id == reseller.id,
     ).first()
     if not invoice:
         return error_response("Customer invoice not found", 404)
 
-    
-    # update status
+    # update status invoice
     if payload.status:
         invoice.status = payload.status
-
-        # kalau invoice dibayar → catat paid_at
         if payload.status == "paid" and not invoice.paid_at:
-            invoice.paid_at = datetime.now()
+            invoice.paid_at = datetime.utcnow()
 
     db.execute(
         text("SELECT set_config('app.current_user', :uid, true)"),
-        {"uid": str(reseller.id)}
+        {"uid": str(reseller.id)},
     )
     db.commit()
     db.refresh(invoice)
 
-    # jika status berubah jadi paid → extend active_until user
+    # jika invoice dibayar
     if invoice.status == "paid":
         user = db.query(models.user.PPPUser).filter(
             models.user.PPPUser.id == invoice.user_id
@@ -112,33 +112,58 @@ def update_customer_invoice(
         ).first()
 
         if user and profile:
-            # hitung jumlah bulan dibayar dari amount
+            # 1) disconnect dulu semua sesi user di NAS reseller
+            routers = db.query(models.router.MikrotikRouter).filter(
+                models.router.MikrotikRouter.reseller_id == reseller.id,
+                models.router.MikrotikRouter.deleted_at.is_(None),
+                models.router.MikrotikRouter.is_active.is_(True),
+            ).all()
+            for r in routers:
+                try:
+                    coa.disconnect_user(
+                        username=user.username,
+                        nas_ip=str(r.mgmt_ip),
+                        secret=r.radius_secret,
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"[update_customer_invoice] CoA disconnect gagal {user.username} @ {r.mgmt_ip}: {e}"
+                    )
+
+            # 2) hitung jumlah bulan dibayar
             months_paid = max(1, round(invoice.amount / float(profile.price or 1)))
 
+            # 3) extend active_until (logika lama dipertahankan)
             if user.active_until and user.active_until > datetime.utcnow():
-                # extend dari active_until lama
                 user.active_until = add_months_keep_dom(user.active_until, months_paid)
             else:
-                # fallback → mulai dari sekarang
                 base = invoice.period_end or datetime.utcnow()
                 user.active_until = add_months_keep_dom(base, months_paid)
 
-            # jika sebelumnya suspended → aktifkan kembali
+            # 4) kalau status suspended → aktifkan kembali
             if user.status == "suspended":
                 user.status = "active"
 
             db.execute(
                 text("SELECT set_config('app.current_user', :uid, true)"),
-                {"uid": str(reseller.id)}
+                {"uid": str(reseller.id)},
             )
             db.commit()
             db.refresh(user)
 
-            # kirim WA konfirmasi pembayaran
+            # 5) kirim WA konfirmasi pembayaran
             if user.phone:
-                msg = format_invoice_paid_message(
-                    invoice, is_customer=True, user=user, profile=profile
-                )
-                send_whatsapp(user.phone, msg)
+                try:
+                    msg = format_invoice_paid_message(
+                        invoice, is_customer=True, user=user, profile=profile
+                    )
+                    send_whatsapp(user.phone, msg)
+                except Exception as e:
+                    logger.error(
+                        f"[update_customer_invoice] WA notif gagal ke {user.username}: {e}"
+                    )
 
-    return success_response(invoice, "Customer invoice updated successfully")
+    return success_response(
+        CustomerInvoiceResponse.from_orm(invoice),
+        "Customer invoice updated successfully",
+    )
