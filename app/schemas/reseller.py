@@ -36,3 +36,8 @@ class ResellerResponse(ResellerBase):
 
     class Config:
         orm_mode = True
+        
+class ResellerSummary(BaseModel):
+    total_users: int
+    total_routers: int
+    last_invoice_id: Optional[str]
