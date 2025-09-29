@@ -1,35 +1,33 @@
-from pydantic import BaseModel
-from typing import Optional, Any
-from datetime import datetime
-from uuid import UUID
+# app/schemas/invoice.py
 
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional, Dict
+from decimal import Decimal
+from uuid import UUID
 
 class InvoiceBase(BaseModel):
     period_start: datetime
     period_end: datetime
-    users_count: int
-    unit_price: float
-    subtotal: float
-    discount: Optional[float] = 0
-    tax: Optional[float] = 0
-    total: float
-    currency: Optional[str] = "IDR"
-    status: Optional[str] = "draft"   # langsung string enum dari DB
-    meta: Optional[Any] = None        # snapshot reseller info
-
 
 class InvoiceCreate(InvoiceBase):
+    """dipakai saat generate invoice"""
+    # secara teknis bisa saja banyak field,
+    # tapi di endpoint /generate hanya period_start & period_end yang dipakai
     pass
-
-
-class InvoiceUpdate(BaseModel):
-    status: Optional[str] = None
-
 
 class InvoiceResponse(InvoiceBase):
     id: UUID
     reseller_id: UUID
+    users_count: int
+    unit_price: Decimal
+    subtotal: Decimal
+    discount: Decimal
+    tax: Decimal
+    total: Decimal
+    currency: str
     status: str
+    meta: Optional[Dict] = None
     created_at: datetime
     updated_at: datetime
 
