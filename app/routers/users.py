@@ -127,7 +127,7 @@ def update_user(
         # ➕ kirim WA jika status aktif
         if payload.status == "active":
             try:
-                if user.phone_number:  # pastikan ada nomor WA
+                if user.phone:  # pastikan ada nomor WA
                     msg = format_user_activated(user)
                     if user.phone:
                         send_whatsapp(user.phone, msg)
