@@ -10,11 +10,11 @@ class CustomerInvoiceBase(BaseModel):
     period_end: datetime
     amount: Decimal
 
-class CustomerInvoiceCreate(CustomerInvoiceBase):
+class CustomerInvoiceCreate(BaseModel):
     user_id: UUID
-    period_start: datetime
-    period_end: datetime
-    amount: Decimal
+    months: int = 1                          # default 1 bulan
+    period_start: Optional[datetime] = None  # opsional; kalau None dihitung otomatis
+    meta: Optional[dict] = None              # detail untuk nota (opsional)
 
 class CustomerInvoiceUpdate(BaseModel):
     status: Optional[str] = None

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timedelta
 from sqlalchemy import text
-from app.utils.wa_gateway import send_whatsapp, format_invoice_paid_message
+from app.utils.wa_gateway import send_whatsapp, format_invoice_paid_message, format_invoice_unpaid_message
 from app.utils.time import add_months_keep_dom  # helper untuk tambah bulan
 from app.utils.responses import success_response, error_response
 
@@ -20,31 +20,27 @@ logger = logging.getLogger("app.routers.customer_invoices")
 router = APIRouter()
 
 # ➕ buat customer invoice
-# 1. Default 1 bulan
+# Default (1 bulan):
+
 # {
 #   "user_id": "9c88d6e4-bbbc-4e2e-84db-3dfd1e56d3a0"
 # }
 
-# 2. Bayar 2 bulan sekaligus
+
+# Bayar 3 bulan sekaligus:
+
 # {
 #   "user_id": "9c88d6e4-bbbc-4e2e-84db-3dfd1e56d3a0",
-#   "months": 2
+#   "months": 3
 # }
 
-# 3. Bayar 5 bulan sekaligus + catatan di meta
-# {
-#   "user_id": "9c88d6e4-bbbc-4e2e-84db-3dfd1e56d3a0",
-#   "months": 5,
-#   "meta": {
-#     "catatan": "bayar langsung 5 bulan biar hemat"
-#   }
-# }
 
-# 4. Override periode mulai (misal paket khusus mulai pertengahan bulan)
+# Dengan catatan khusus (meta override):
+
 # {
 #   "user_id": "9c88d6e4-bbbc-4e2e-84db-3dfd1e56d3a0",
-#   "months": 1,
-#   "period_start": "2025-09-15T00:00:00Z"
+#   "months": 2,
+#   "meta": { "catatan": "Bayar langsung 2 bulan" }
 # }
 
 @router.post("", response_model=CustomerInvoiceResponse)
@@ -53,7 +49,7 @@ def create_customer_invoice(
     db: Session = Depends(get_db),
     reseller=Depends(get_current_reseller),
 ):
-    # 1. Pastikan user ada & milik reseller
+    # 1. Validasi user
     user = db.query(models.user.PPPUser).filter(
         models.user.PPPUser.id == payload.user_id,
         models.user.PPPUser.reseller_id == reseller.id,
@@ -61,7 +57,6 @@ def create_customer_invoice(
     ).first()
     if not user:
         return error_response("User not found", 404)
-
     if not user.profile_id:
         return error_response("User does not have an assigned profile", 400)
 
@@ -71,14 +66,16 @@ def create_customer_invoice(
     if not profile:
         return error_response("Profile not found", 404)
 
-    # 2. Hitung periode & amount
+    # 2. Tentukan periode berdasarkan active_until
     months = payload.months or 1
-    period_start = payload.period_start or datetime.utcnow().replace(day=1)
+    base_start = (user.active_until + timedelta(days=1)) if user.active_until else datetime.utcnow().date()
+    period_start = datetime.combine(base_start, datetime.min.time())
     period_end = add_months_keep_dom(period_start, months) - timedelta(days=1)
 
+    # 3. Hitung amount
     amount = Decimal(profile.price or 0) * months
 
-    # 3. Siapkan meta untuk nota
+    # 4. Meta untuk nota
     meta = payload.meta or {
         "user_name": user.full_name or user.username,
         "profile_name": profile.name,
@@ -88,7 +85,7 @@ def create_customer_invoice(
         "currency": reseller.currency or "IDR",
     }
 
-    # 4. Buat invoice
+    # 5. Buat invoice
     invoice = models.customer_invoice.CustomerInvoice(
         reseller_id=reseller.id,
         user_id=user.id,
@@ -96,22 +93,19 @@ def create_customer_invoice(
         period_start=period_start,
         period_end=period_end,
         amount=amount,
-        status="unpaid",  # selalu unpaid saat dibuat
+        status="unpaid",
         meta=meta,
     )
 
     db.add(invoice)
-    db.execute(
-        text("SELECT set_config('app.current_user', :uid, true)"),
-        {"uid": str(reseller.id)}
-    )
+    db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.commit()
     db.refresh(invoice)
 
-    # 5. Kirim WA invoice otomatis
+    # 6. Kirim WA invoice
     if user.phone:
         try:
-            msg = format_invoice_unpaid_message(invoice, is_customer=True, user=user, profile=profile)
+            msg = format_invoice_unpaid_message(invoice, user=user, profile=profile)
             send_whatsapp(user.phone, msg)
         except Exception as e:
             logger.error(f"[create_customer_invoice] WA gagal ke {user.username}: {e}")
@@ -155,7 +149,6 @@ def update_customer_invoice(
     if not invoice:
         return error_response("Customer invoice not found", 404)
 
-    # hanya boleh update status -> paid
     if payload.status and payload.status.lower() == "paid":
         if invoice.status == "paid":
             return error_response("Invoice already paid", 400)
@@ -172,21 +165,15 @@ def update_customer_invoice(
         ).first()
 
         if user and profile:
-            old_status = user.status  # simpan status lama
+            old_status = user.status
 
-            # extend active_until sesuai months
-            months_paid = invoice.meta.get("months") if invoice.meta else 1
-            if user.active_until and user.active_until > datetime.utcnow():
-                user.active_until = add_months_keep_dom(user.active_until, months_paid)
-            else:
-                base = invoice.period_end or datetime.utcnow()
-                user.active_until = add_months_keep_dom(base, months_paid)
+            # ⏩ set active_until langsung ke akhir periode invoice
+            user.active_until = invoice.period_end.date()
 
-            # jika sebelumnya suspended -> aktifkan kembali
+            # kalau sebelumnya suspended → aktifkan
             if user.status == "suspended":
                 user.status = "active"
 
-            # commit perubahan user dulu
             db.execute(
                 text("SELECT set_config('app.current_user', :uid, true)"),
                 {"uid": str(reseller.id)},
@@ -194,7 +181,7 @@ def update_customer_invoice(
             db.commit()
             db.refresh(user)
 
-            # jika status user berubah -> disconnect session
+            # disconnect hanya jika status berubah
             if user.status != old_status:
                 routers = db.query(models.router.MikrotikRouter).filter(
                     models.router.MikrotikRouter.reseller_id == reseller.id,
