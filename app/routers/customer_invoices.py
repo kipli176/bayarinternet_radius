@@ -49,7 +49,7 @@ def create_customer_invoice(
     db: Session = Depends(get_db),
     reseller=Depends(get_current_reseller),
 ):
-    # 1. Pastikan user valid
+    # 1. Validasi user
     user = db.query(models.user.PPPUser).filter(
         models.user.PPPUser.id == payload.user_id,
         models.user.PPPUser.reseller_id == reseller.id,
@@ -66,7 +66,7 @@ def create_customer_invoice(
     if not profile:
         return error_response("Profile not found", 404)
 
-    # 2. Tentukan periode dari active_until
+    # 2. Tentukan periode berdasarkan active_until
     months = payload.months or 1
     if user.active_until:
         base_start = user.active_until + timedelta(days=1)
@@ -75,6 +75,11 @@ def create_customer_invoice(
 
     period_start = datetime.combine(base_start, datetime.min.time())
     period_end = add_months_keep_dom(period_start, months) - timedelta(days=1)
+
+    # contoh:
+    # active_until = 2025-09-30
+    # months = 1 -> period_start = 2025-10-01, period_end = 2025-10-30
+    # months = 2 -> period_start = 2025-10-01, period_end = 2025-11-30
 
     # 3. Hitung jumlah tagihan
     amount = Decimal(profile.price or 0) * months
