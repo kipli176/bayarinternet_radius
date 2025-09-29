@@ -6,7 +6,7 @@ from sqlalchemy import text
 
 from app.database import get_db
 from app import models
-from app.schemas.auth import LoginRequest, LoginResponse, RegisterRequest 
+from app.schemas.auth import LoginRequest, LoginResponse 
 from app.schemas.reseller import ResellerCreate, ResellerResponse
 from app.utils import security
 
