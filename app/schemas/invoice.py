@@ -10,11 +10,11 @@ class InvoiceBase(BaseModel):
     period_start: datetime
     period_end: datetime
 
-class InvoiceCreate(InvoiceBase):
-    """dipakai saat generate invoice"""
-    # secara teknis bisa saja banyak field,
-    # tapi di endpoint /generate hanya period_start & period_end yang dipakai
+class InvoiceCreate(InvoiceBase): 
     pass
+
+class InvoiceUpdate(BaseModel):
+    status: Optional[str] = None
 
 class InvoiceResponse(InvoiceBase):
     id: UUID
