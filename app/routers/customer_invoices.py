@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import text
 from app.utils.wa_gateway import send_whatsapp, format_invoice_paid_message
 from app.utils.time import add_months_keep_dom  # helper untuk tambah bulan
+from app.utils.responses import success_response, error_response
 
 from app.database import get_db
 from app import models
@@ -27,12 +28,12 @@ def create_customer_invoice(payload: CustomerInvoiceCreate, db: Session = Depend
         models.user.PPPUser.reseller_id == reseller.id
     ).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return error_response("User not found", 404)
 
     # ambil profil untuk harga default
     profile = db.query(models.profile.PPPProfile).filter(models.profile.PPPProfile.id == payload.profile_id).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        return error_response("Profile not found", 404)
 
     amount = payload.amount or float(profile.price)
 
@@ -49,14 +50,14 @@ def create_customer_invoice(payload: CustomerInvoiceCreate, db: Session = Depend
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)}) 
     db.commit()
     db.refresh(invoice)
-    return invoice
+    return success_response(invoice, "Invoice created successfully", 201)
 
 # 📋 daftar invoice customer milik reseller
 @router.get("", response_model=List[CustomerInvoiceResponse])
 def list_customer_invoices(db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
-    return db.query(models.customer_invoice.CustomerInvoice).filter(
+    return success_response(db.query(models.customer_invoice.CustomerInvoice).filter(
         models.customer_invoice.CustomerInvoice.reseller_id == reseller.id
-    ).order_by(models.customer_invoice.CustomerInvoice.created_at.desc()).all()
+    ).order_by(models.customer_invoice.CustomerInvoice.created_at.desc()).all(), "Customer invoices retrieved successfully")
 
 # 🔎 detail invoice customer
 @router.get("/{invoice_id}", response_model=CustomerInvoiceResponse)
@@ -66,9 +67,10 @@ def get_customer_invoice(invoice_id: str, db: Session = Depends(get_db), reselle
         models.customer_invoice.CustomerInvoice.reseller_id == reseller.id
     ).first()
     if not invoice:
-        raise HTTPException(status_code=404, detail="Customer invoice not found")
-    return invoice
-# ✏️ update status invoice customer 
+        return error_response("Customer invoice not found", 404)
+    return success_response(invoice, "Customer invoice retrieved successfully")
+
+# ✏️ update status invoice customer
 
 @router.patch("/{invoice_id}", response_model=CustomerInvoiceResponse)
 def update_customer_invoice(
@@ -82,7 +84,7 @@ def update_customer_invoice(
         models.customer_invoice.CustomerInvoice.reseller_id == reseller.id
     ).first()
     if not invoice:
-        raise HTTPException(status_code=404, detail="Customer invoice not found")
+        return error_response("Customer invoice not found", 404)
 
     
     # update status
@@ -139,4 +141,4 @@ def update_customer_invoice(
                 )
                 send_whatsapp(user.phone, msg)
 
-    return invoice
+    return success_response(invoice, "Customer invoice updated successfully")

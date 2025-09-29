@@ -5,6 +5,7 @@ from app.database import get_db
 from app import models
 from app.schemas.reports import ResellerReportResponse, UserReportResponse, UserInvoiceSummary, UserUsageSummary, SystemReportResponse
 from app.routers.resellers import get_current_reseller
+from app.utils.responses import success_response, error_response
 
 router = APIRouter()
 
@@ -61,7 +62,7 @@ def reseller_report(db: Session = Depends(get_db), reseller=Depends(get_current_
         models.invoice.Invoice.reseller_id == reseller.id
     ).scalar()
 
-    return ResellerReportResponse(
+    report = ResellerReportResponse(
         reseller_id=str(reseller.id),
         reseller_name=reseller.name,
         total_users=total_users,
@@ -74,6 +75,8 @@ def reseller_report(db: Session = Depends(get_db), reseller=Depends(get_current_
         total_revenue=total_revenue,
         last_invoice_date=last_invoice_date
     )
+    return success_response(report.dict(), "Reseller report retrieved successfully")
+
 
 
 # 📊 laporan detail per user
@@ -85,7 +88,7 @@ def user_report(user_id: str, db: Session = Depends(get_db), reseller=Depends(ge
     ).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return error_response("User not found", 404)
 
     # invoices user
     invoices = db.query(models.customer_invoice.CustomerInvoice).filter(
@@ -120,7 +123,7 @@ def user_report(user_id: str, db: Session = Depends(get_db), reseller=Depends(ge
         last_session_stop=usage_query[4]
     )
 
-    return UserReportResponse(
+    report = UserReportResponse(
         user_id=str(user.id),
         username=user.username,
         full_name=user.full_name,
@@ -130,6 +133,7 @@ def user_report(user_id: str, db: Session = Depends(get_db), reseller=Depends(ge
         invoices=invoices_summary,
         usage=usage_summary
     )
+    return success_response(report.dict(), "User report retrieved successfully")
 
 
 # 📊 laporan global sistem (admin only)
@@ -163,7 +167,7 @@ def system_report(db: Session = Depends(get_db)):
         func.coalesce(func.sum(models.customer_invoice.CustomerInvoice.amount), 0)
     ).filter(models.customer_invoice.CustomerInvoice.status == "paid").scalar()
 
-    return SystemReportResponse(
+    report = SystemReportResponse(
         total_resellers=total_resellers,
         total_users=total_users,
         active_users=active_users,
@@ -173,3 +177,4 @@ def system_report(db: Session = Depends(get_db)):
         invoices_overdue=invoices_overdue,
         total_revenue=float(total_revenue or 0),
     )
+    return success_response(report.dict(), "System report retrieved successfully")

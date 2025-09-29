@@ -6,6 +6,7 @@ from app.database import get_db
 from app import models
 from app.schemas.monitoring import SessionResponse
 from app.routers.resellers import get_current_reseller
+from app.utils.responses import success_response, error_response
 
 router = APIRouter()
 
@@ -23,7 +24,7 @@ def list_active_sessions(
         )
         .all()
     )
-    return sessions
+    return success_response(sessions, "Active sessions retrieved successfully")
 
 
 # 🔎 detail session user
@@ -40,7 +41,7 @@ def get_user_sessions(
         .first()
     )
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return error_response("User not found", 404)
 
     sessions = (
         db.query(models.radacct.RadAcct)
@@ -50,7 +51,7 @@ def get_user_sessions(
         )
         .all()
     )
-    return sessions
+    return success_response(sessions, "User sessions retrieved successfully")
 
 
 # ❌ disconnect user manual
@@ -67,9 +68,9 @@ def disconnect_user(
         .first()
     )
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return error_response("User not found", 404)
 
     # opsional: trigger CoA
     # coa.disconnect_user(username=username, nas_ip="...", secret="...")
 
-    return {"detail": f"Disconnect request sent for {username}"}
+    return success_response({"detail": f"Disconnect request sent for {username}"})

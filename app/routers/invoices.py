@@ -15,15 +15,16 @@ from app.schemas.invoice import (
     InvoiceUpdate
 )
 from app.routers.resellers import get_current_reseller
+from app.utils.responses import success_response, error_response
 
 router = APIRouter()
 
 # 📋 daftar invoice reseller
 @router.get("", response_model=List[InvoiceResponse])
 def list_invoices(db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
-    return db.query(models.invoice.Invoice).filter(
+    return success_response(db.query(models.invoice.Invoice).filter(
         models.invoice.Invoice.reseller_id == reseller.id
-    ).order_by(models.invoice.Invoice.created_at.desc()).all()
+    ).order_by(models.invoice.Invoice.created_at.desc()).all(), "Invoices retrieved successfully")
 
 # ➕ generate invoice reseller
 @router.post("/generate", response_model=InvoiceResponse)
@@ -57,7 +58,7 @@ def generate_invoice(payload: InvoiceCreate, db: Session = Depends(get_db), rese
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)}) 
     db.commit()
     db.refresh(invoice)
-    return invoice
+    return success_response(invoice, "Invoice created successfully", 201)
 
 # 🔎 detail invoice reseller
 @router.get("/{invoice_id}", response_model=InvoiceResponse)
@@ -67,8 +68,8 @@ def get_invoice(invoice_id: str, db: Session = Depends(get_db), reseller=Depends
         models.invoice.Invoice.reseller_id == reseller.id
     ).first()
     if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found")
-    return invoice
+        return error_response("Invoice not found", 404)
+    return success_response(invoice, "Invoice retrieved successfully")
 
 # ✏️ update status invoice reseller
 @router.patch("/{invoice_id}/status", response_model=InvoiceResponse)
@@ -78,7 +79,7 @@ def update_invoice_status(invoice_id: str, payload: InvoiceUpdate, db: Session =
         models.invoice.Invoice.reseller_id == reseller.id
     ).first()
     if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found")
+        return error_response("Invoice not found", 404)
 
     if payload.status:
         invoice.status = payload.status
@@ -90,4 +91,4 @@ def update_invoice_status(invoice_id: str, payload: InvoiceUpdate, db: Session =
     if invoice.status == "paid" and reseller.phone:
         msg = format_invoice_paid_message(invoice, is_customer=False, user=reseller)
         send_whatsapp(reseller.phone, msg)
-    return invoice
+    return success_response(invoice, "Invoice updated successfully")

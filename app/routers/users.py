@@ -11,6 +11,7 @@ from app.database import get_db
 from app import models
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.routers.resellers import get_current_reseller
+from app.utils.responses import success_response, error_response
 
 router = APIRouter()
 
@@ -22,8 +23,8 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), reseller=Dep
         models.user.PPPUser.username == payload.username
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Username already exists")
-    
+        return error_response("Username already exists", 400)
+
     user = models.user.PPPUser(
         reseller_id=reseller.id,
         profile_id=payload.profile_id,
@@ -50,7 +51,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), reseller=Dep
     if user.phone:
         send_whatsapp(user.phone, msg) 
 
-    return user
+    return success_response(user, "User created successfully")
 
 # 📋 daftar PPP user
 @router.get("", response_model=List[UserResponse])
@@ -65,7 +66,7 @@ def list_users(
     )
     if status:
         q = q.filter(models.user.PPPUser.status == status)
-    return q.all()
+    return success_response(q.all(), "Users retrieved successfully")
 
 # 🔎 detail user
 @router.get("/{user_id}", response_model=UserResponse)
@@ -76,8 +77,8 @@ def get_user(user_id: str, db: Session = Depends(get_db), reseller=Depends(get_c
         models.user.PPPUser.deleted_at.is_(None)
     ).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+        return error_response("User not found", 404)
+    return success_response(user, "User retrieved successfully")
 
 # ✏️ update PPP user
 @router.patch("/{user_id}", response_model=UserResponse)
@@ -93,7 +94,7 @@ def update_user(
         models.user.PPPUser.deleted_at.is_(None)
     ).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return error_response("User not found", 404)
 
     # simpan status lama
     old_status = user.status
@@ -135,7 +136,7 @@ def update_user(
                         send_whatsapp(user.phone, msg)
             except Exception as e:
                 print(f"Gagal kirim WhatsApp ke {user.username}: {e}")
-    return user
+    return success_response(user, "User updated successfully")
 
 # ❌ hapus user (soft delete)
 @router.delete("/{user_id}", response_model=UserResponse)
@@ -149,7 +150,7 @@ def delete_user(
         models.user.PPPUser.reseller_id == reseller.id
     ).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return error_response("User not found", 404)
 
     # Putuskan koneksi user dari semua router (CoA)
     routers = db.query(models.router.MikrotikRouter).filter(
@@ -174,5 +175,5 @@ def delete_user(
     db.delete(user)
     db.commit()
 
-    return response_user
+    return success_response(response_user, "User deleted successfully")
 

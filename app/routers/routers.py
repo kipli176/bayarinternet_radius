@@ -8,6 +8,7 @@ from app.database import get_db
 from app import models
 from app.schemas.router import RouterCreate, RouterUpdate, RouterResponse
 from app.routers.resellers import get_current_reseller
+from app.utils.responses import success_response, error_response
 
 router = APIRouter()
 
@@ -32,15 +33,15 @@ def create_router(
     db.add(router_obj)
     db.commit()
     db.refresh(router_obj)
-    return router_obj
+    return success_response(router_obj, "Router created successfully")
 
 # 📋 daftar semua router reseller
 @router.get("", response_model=List[RouterResponse])
 def list_routers(db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
-    return db.query(models.router.MikrotikRouter).filter(
+    return success_response(db.query(models.router.MikrotikRouter).filter(
         models.router.MikrotikRouter.reseller_id == reseller.id,
         models.router.MikrotikRouter.deleted_at.is_(None)
-    ).all()
+    ).all(), "Routers retrieved successfully")
 
 # 🔎 detail router
 @router.get("/{router_id}", response_model=RouterResponse)
@@ -51,8 +52,8 @@ def get_router(router_id: str, db: Session = Depends(get_db), reseller=Depends(g
         models.router.MikrotikRouter.deleted_at.is_(None)
     ).first()
     if not router_obj:
-        raise HTTPException(status_code=404, detail="Router not found")
-    return router_obj
+        return error_response("Router not found", 404)
+    return success_response(router_obj, "Router retrieved successfully")
 
 # ✏️ update router
 @router.patch("/{router_id}", response_model=RouterResponse)
@@ -63,13 +64,13 @@ def update_router(router_id: str, payload: RouterUpdate, db: Session = Depends(g
         models.router.MikrotikRouter.deleted_at.is_(None)
     ).first()
     if not router_obj:
-        raise HTTPException(status_code=404, detail="Router not found")
+        return error_response("Router not found", 404)
 
     for key, value in payload.dict(exclude_unset=True).items():
         setattr(router_obj, key, value)
     db.commit()
     db.refresh(router_obj)
-    return router_obj
+    return success_response(router_obj, "Router updated successfully")
 
 # ❌ hapus (soft delete) router
 @router.delete("/{router_id}", response_model=RouterResponse)
@@ -83,7 +84,7 @@ def delete_router(
         models.router.MikrotikRouter.reseller_id == reseller.id
     ).first()
     if not router_obj:
-        raise HTTPException(status_code=404, detail="Router not found")
+        return error_response("Router not found", 404)
 
     # snapshot sebelum dihapus
     response_router = RouterResponse.from_orm(router_obj)
@@ -92,4 +93,4 @@ def delete_router(
     db.delete(router_obj)
     db.commit()
 
-    return response_router
+    return success_response(response_router, "Router deleted successfully")

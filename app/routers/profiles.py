@@ -9,6 +9,7 @@ from app.database import get_db
 from app import models
 from app.schemas.profile import ProfileCreate, ProfileUpdate, ProfileResponse
 from app.routers.resellers import get_current_reseller
+from app.utils.responses import success_response, error_response
 
 router = APIRouter()
 
@@ -36,15 +37,15 @@ def create_profile(payload: ProfileCreate, db: Session = Depends(get_db), resell
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.commit()
     db.refresh(profile)
-    return profile
+    return success_response(profile, "Profile created successfully", 201)
 
 # 📋 daftar semua profil reseller
 @router.get("", response_model=List[ProfileResponse])
 def list_profiles(db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
-    return db.query(models.profile.PPPProfile).filter(
+    return success_response(db.query(models.profile.PPPProfile).filter(
         models.profile.PPPProfile.reseller_id == reseller.id,
         models.profile.PPPProfile.deleted_at.is_(None)
-    ).all()
+    ).all(), "Profiles retrieved successfully")
 
 # 🔎 detail profil
 @router.get("/{profile_id}", response_model=ProfileResponse)
@@ -55,8 +56,8 @@ def get_profile(profile_id: str, db: Session = Depends(get_db), reseller=Depends
         models.profile.PPPProfile.deleted_at.is_(None)
     ).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    return profile
+        return error_response("Profile not found", 404)
+    return success_response(profile, "Profile retrieved successfully")
 
 # ✏️ update profil
 @router.patch("/{profile_id}", response_model=ProfileResponse)
@@ -67,14 +68,14 @@ def update_profile(profile_id: str, payload: ProfileUpdate, db: Session = Depend
         models.profile.PPPProfile.deleted_at.is_(None)
     ).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        return error_response("Profile not found", 404)
 
     for key, value in payload.dict(exclude_unset=True).items():
         setattr(profile, key, value)
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.commit()
     db.refresh(profile)
-    return profile
+    return success_response(profile, "Profile updated successfully")
 
 # ❌ hapus (soft delete) profil
 @router.delete("/{profile_id}")
@@ -85,9 +86,9 @@ def delete_profile(profile_id: str, db: Session = Depends(get_db), reseller=Depe
         models.profile.PPPProfile.deleted_at.is_(None)
     ).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        return error_response("Profile not found", 404)
 
     profile.deleted_at = datetime.utcnow()
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.commit()
-    return {"status": "success", "message": "Profile deleted"}
+    return success_response({"status": "success", "message": "Profile deleted"})

@@ -9,6 +9,8 @@ from app import models
 from app.schemas.auth import LoginRequest, LoginResponse 
 from app.schemas.reseller import ResellerCreate, ResellerResponse
 from app.utils import security
+from app.utils.responses import success_response, error_response
+
 
 router = APIRouter()
 
@@ -17,7 +19,8 @@ router = APIRouter()
 def register_reseller(payload: ResellerCreate, db: Session = Depends(get_db)):
     existing = db.query(models.reseller.Reseller).filter(models.reseller.Reseller.email == payload.email).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        # raise HTTPException(status_code=400, detail="Email already registered")
+        return error_response("Email already registered", 400)
 
     reseller = models.reseller.Reseller(
         name=payload.name,
@@ -36,15 +39,15 @@ def register_reseller(payload: ResellerCreate, db: Session = Depends(get_db)):
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.commit()
     db.refresh(reseller)
-    return reseller
+    return success_response(ResellerResponse.from_orm(reseller).dict(), "Reseller registered successfully", 201)
 
 # login reseller
 @router.post("/login", response_model=LoginResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     reseller = db.query(models.reseller.Reseller).filter(models.reseller.Reseller.email == payload.email).first()
     if not reseller or not security.verify_password(payload.password, reseller.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        return error_response("Invalid credentials", 401)
 
     access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     token = security.create_access_token(data={"sub": str(reseller.id)}, expires_delta=access_token_expires)
-    return {"access_token": token, "token_type": "bearer"}
+    return success_response({"access_token": token, "token_type": "bearer"}, "Login successful")

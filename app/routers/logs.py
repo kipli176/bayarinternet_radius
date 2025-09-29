@@ -7,6 +7,7 @@ from app.database import get_db
 from app import models
 from app.schemas.logs import AuthLogResponse, AccountingLogResponse
 from app.routers.resellers import get_current_reseller
+from app.utils.responses import success_response, error_response
 
 router = APIRouter()
 
@@ -41,16 +42,18 @@ def get_auth_logs(
 
     rows = q.order_by(models.radpostauth.RadPostAuth.authdate.desc()).limit(limit).all()
 
-    return [
+    logs = [
         AuthLogResponse(
             id=r.id,
             username=r.username,
             reply=r.reply,
             authdate=r.authdate,
             nas_ip=getattr(r, "nas_ip", None) or "Unknown",
-        )
+        ).dict()
         for r in rows
     ]
+    return success_response(logs, "Authentication logs retrieved successfully")
+
 
 
 # 📊 logs dari radacct (accounting session)
@@ -81,7 +84,7 @@ def get_accounting_logs(
 
     rows = q.order_by(models.radacct.RadAcct.acctstarttime.desc()).limit(limit).all()
 
-    return [
+    logs = [
         AccountingLogResponse(
             username=r.username,
             nas_ip=r.nasipaddress,
@@ -91,6 +94,8 @@ def get_accounting_logs(
             bytes_in=r.acctinputoctets or 0,
             bytes_out=r.acctoutputoctets or 0,
             terminate_cause=r.acctterminatecause or "Unknown",
-        )
+        ).dict()
         for r in rows
     ]
+    return success_response(logs, "Accounting logs retrieved successfully")
+
