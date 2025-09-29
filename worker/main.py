@@ -30,7 +30,7 @@ async def main():
     scheduler.add_job(
         billing.generate_invoices_h_minus_7,
         "interval",
-        minutes=5,
+        minutes=3,
         kwargs={"force": True}
     )
     scheduler.add_job(billing.generate_invoices_h_minus_7, "cron", hour=7, minute=0)
