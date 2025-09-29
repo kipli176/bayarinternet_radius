@@ -65,16 +65,24 @@ def update_router(router_id: str, payload: RouterUpdate, db: Session = Depends(g
     return router_obj
 
 # ❌ hapus (soft delete) router
-@router.delete("/{router_id}")
-def delete_router(router_id: str, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
+@router.delete("/{router_id}", response_model=RouterResponse)
+def delete_router(
+    router_id: str,
+    db: Session = Depends(get_db),
+    reseller=Depends(get_current_reseller)
+):
     router_obj = db.query(models.router.MikrotikRouter).filter(
         models.router.MikrotikRouter.id == router_id,
-        models.router.MikrotikRouter.reseller_id == reseller.id,
-        models.router.MikrotikRouter.deleted_at.is_(None)
+        models.router.MikrotikRouter.reseller_id == reseller.id
     ).first()
     if not router_obj:
         raise HTTPException(status_code=404, detail="Router not found")
 
-    router_obj.deleted_at = datetime.utcnow()
+    # snapshot sebelum dihapus
+    response_router = RouterResponse.from_orm(router_obj)
+
+    # hapus permanen
+    db.delete(router_obj)
     db.commit()
-    return {"status": "success", "message": "Router deleted"}
+
+    return response_router
