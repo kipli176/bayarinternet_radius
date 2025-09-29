@@ -49,7 +49,7 @@ def create_customer_invoice(
     db: Session = Depends(get_db),
     reseller=Depends(get_current_reseller),
 ):
-    # 1. Validasi user
+    # 1. Pastikan user valid
     user = db.query(models.user.PPPUser).filter(
         models.user.PPPUser.id == payload.user_id,
         models.user.PPPUser.reseller_id == reseller.id,
@@ -66,13 +66,17 @@ def create_customer_invoice(
     if not profile:
         return error_response("Profile not found", 404)
 
-    # 2. Tentukan periode berdasarkan active_until
+    # 2. Tentukan periode dari active_until
     months = payload.months or 1
-    base_start = (user.active_until + timedelta(days=1)) if user.active_until else datetime.utcnow().date()
+    if user.active_until:
+        base_start = user.active_until + timedelta(days=1)
+    else:
+        base_start = datetime.utcnow().date()
+
     period_start = datetime.combine(base_start, datetime.min.time())
     period_end = add_months_keep_dom(period_start, months) - timedelta(days=1)
 
-    # 3. Hitung amount
+    # 3. Hitung jumlah tagihan
     amount = Decimal(profile.price or 0) * months
 
     # 4. Meta untuk nota
@@ -85,7 +89,7 @@ def create_customer_invoice(
         "currency": reseller.currency or "IDR",
     }
 
-    # 5. Buat invoice
+    # 5. Simpan invoice
     invoice = models.customer_invoice.CustomerInvoice(
         reseller_id=reseller.id,
         user_id=user.id,
@@ -98,11 +102,14 @@ def create_customer_invoice(
     )
 
     db.add(invoice)
-    db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
+    db.execute(
+        text("SELECT set_config('app.current_user', :uid, true)"),
+        {"uid": str(reseller.id)},
+    )
     db.commit()
     db.refresh(invoice)
 
-    # 6. Kirim WA invoice
+    # 6. Kirim WA tagihan
     if user.phone:
         try:
             msg = format_invoice_unpaid_message(invoice, user=user, profile=profile)
