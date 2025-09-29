@@ -1,46 +1,61 @@
 from pydantic import BaseModel
-from datetime import datetime
 from typing import Optional
+from datetime import datetime
 from uuid import UUID
 
-class ProfileBase(BaseModel):
+# 👉 Base schema untuk shared field
+class PPPProfileBase(BaseModel):
     name: str
     price: float
-    group_name: Optional[str]
-    rate_limit_up: Optional[str]
-    rate_limit_down: Optional[str]
-    burst_limit_up: Optional[str]
-    burst_limit_down: Optional[str]
-    burst_threshold_up: Optional[str]
-    burst_threshold_down: Optional[str]
-    burst_time_up: Optional[str]
-    burst_time_down: Optional[str]
-    priority: Optional[int]
-    auto_pool: Optional[bool] = False
 
-class ProfileCreate(ProfileBase):
+    rate_limit_up: Optional[str] = None
+    rate_limit_down: Optional[str] = None
+    burst_limit_up: Optional[str] = None
+    burst_limit_down: Optional[str] = None
+    burst_threshold_up: Optional[str] = None
+    burst_threshold_down: Optional[str] = None
+    burst_time_up: Optional[int] = None
+    burst_time_down: Optional[int] = None
+    min_rate_up: Optional[str] = None
+    min_rate_down: Optional[str] = None
+    priority: Optional[int] = 8
+    group_name: Optional[str] = None
+    auto_pool: Optional[bool] = True
+    is_active: Optional[bool] = True
+
+
+# 👉 Create schema
+class PPPProfileCreate(PPPProfileBase):
     pass
 
-class ProfileUpdate(BaseModel):
+
+# 👉 Update schema (partial update)
+class PPPProfileUpdate(BaseModel):
     name: Optional[str]
     price: Optional[float]
-    group_name: Optional[str]
     rate_limit_up: Optional[str]
     rate_limit_down: Optional[str]
     burst_limit_up: Optional[str]
     burst_limit_down: Optional[str]
     burst_threshold_up: Optional[str]
     burst_threshold_down: Optional[str]
-    burst_time_up: Optional[str]
-    burst_time_down: Optional[str]
+    burst_time_up: Optional[int]
+    burst_time_down: Optional[int]
+    min_rate_up: Optional[str]
+    min_rate_down: Optional[str]
     priority: Optional[int]
+    group_name: Optional[str]
     auto_pool: Optional[bool]
     is_active: Optional[bool]
 
-class ProfileResponse(ProfileBase):
+
+# 👉 Response schema
+class PPPProfileResponse(PPPProfileBase):
     id: UUID
-    is_active: bool
+    reseller_id: UUID
     created_at: datetime
+    updated_at: datetime
+    deleted_at: Optional[datetime]
 
     class Config:
         orm_mode = True

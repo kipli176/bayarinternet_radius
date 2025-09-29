@@ -1,33 +1,36 @@
-# app/models/profile.py
-import uuid
-from sqlalchemy import Column, String, Boolean, Numeric, ForeignKey, Integer
+from sqlalchemy import Column, String, Numeric, Integer, Boolean, ForeignKey, DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID
-from app.database import Base
-from .mixins import TimestampMixin, SoftDeleteMixin
+from sqlalchemy.sql import func
+import uuid
 
-class PPPProfile(Base, TimestampMixin, SoftDeleteMixin):
+from app.database import Base
+
+class PPPProfile(Base):
     __tablename__ = "ppp_profiles"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     reseller_id = Column(UUID(as_uuid=True), ForeignKey("resellers.id", ondelete="CASCADE"), nullable=False)
+    
+    name = Column(String, nullable=False)
+    price = Column(Numeric(12, 2), nullable=False)
 
-    name = Column(String, nullable=False)                   # nama profil
-    group_name = Column(String)                             # optional: binding ke profil di mikrotik
+    rate_limit_up = Column(Text)
+    rate_limit_down = Column(Text)
+    burst_limit_up = Column(Text)
+    burst_limit_down = Column(Text)
+    burst_threshold_up = Column(Text)
+    burst_threshold_down = Column(Text)
+    burst_time_up = Column(Integer)
+    burst_time_down = Column(Integer)
+    min_rate_up = Column(Text)
+    min_rate_down = Column(Text)
 
-    # harga jual
-    price = Column(Numeric(12, 2), nullable=False, default=0)
+    priority = Column(Integer, default=8)
+    group_name = Column(Text)
+    auto_pool = Column(Boolean, default=True)
 
-    # rate limit & burst config
-    rate_limit_up = Column(String)        # ex: "3M"
-    rate_limit_down = Column(String)      # ex: "3M"
-    burst_limit_up = Column(String)
-    burst_limit_down = Column(String)
-    burst_threshold_up = Column(String)
-    burst_threshold_down = Column(String)
-    burst_time_up = Column(String)
-    burst_time_down = Column(String)
-    priority = Column(Integer)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
-    # flag auto assign pool
-    auto_pool = Column(Boolean, nullable=False, default=False)
-    is_active = Column(Boolean, nullable=False, default=True)
+    is_active = Column(Boolean, default=True, nullable=False)
