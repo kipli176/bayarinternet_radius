@@ -5,9 +5,12 @@ from uuid import UUID
 
 class ResellerBase(BaseModel):
     name: str
+    company_name: Optional[str]        # ✅ baru
     email: EmailStr
     phone: Optional[str]
-    price_per_user: float
+    alamat: Optional[str]              # ✅ baru
+    logo: Optional[str]                # ✅ baru
+    price_per_user: float = 500        # ✅ default
     currency: str = "IDR"
     volume_pricing: Optional[Dict[str, Any]]
 
@@ -16,8 +19,11 @@ class ResellerCreate(ResellerBase):
 
 class ResellerUpdate(BaseModel):
     name: Optional[str]
+    company_name: Optional[str]        # ✅ baru
     email: Optional[EmailStr]
     phone: Optional[str]
+    alamat: Optional[str]              # ✅ baru
+    logo: Optional[str]                # ✅ baru
     price_per_user: Optional[float]
     currency: Optional[str]
     volume_pricing: Optional[Dict[str, Any]]
@@ -30,8 +36,3 @@ class ResellerResponse(ResellerBase):
 
     class Config:
         orm_mode = True
-
-class ResellerSummary(BaseModel):
-    total_users: int
-    total_routers: int
-    last_invoice_id: Optional[str]

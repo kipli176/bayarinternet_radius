@@ -23,7 +23,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), reseller=Dep
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already exists")
-
+    
     user = models.user.PPPUser(
         reseller_id=reseller.id,
         profile_id=payload.profile_id,
@@ -32,10 +32,12 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), reseller=Dep
         full_name=payload.full_name,
         email=payload.email,
         phone=payload.phone,
+        alamat=payload.alamat,   # ✅ tambahkan alamat
         status="active",
         active_until=payload.active_until,
         is_active=True
     )
+
     db.add(user)
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)}) 
     db.commit()
@@ -136,28 +138,40 @@ def update_user(
     return user
 
 # ❌ hapus user (soft delete)
-@router.delete("/{user_id}")
-def delete_user(user_id: str, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
+@router.delete("/{user_id}", response_model=UserResponse)
+def delete_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    reseller=Depends(get_current_reseller)
+):
     user = db.query(models.user.PPPUser).filter(
         models.user.PPPUser.id == user_id,
-        models.user.PPPUser.reseller_id == reseller.id,
-        models.user.PPPUser.deleted_at.is_(None)
+        models.user.PPPUser.reseller_id == reseller.id
     ).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    user.deleted_at = datetime.utcnow()
-    db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)}) 
-    db.commit()
-    for router in db.query(models.router.MikrotikRouter).filter(models.router.MikrotikRouter.reseller_id == reseller.id).all():
+    # Putuskan koneksi user dari semua router (CoA)
+    routers = db.query(models.router.MikrotikRouter).filter(
+        models.router.MikrotikRouter.reseller_id == reseller.id
+    ).all()
+    for r in routers:
         try:
             result = coa.disconnect_user(
                 username=user.username,
-                nas_ip=str(router.mgmt_ip),
-                secret=router.radius_secret
+                nas_ip=str(r.mgmt_ip),
+                secret=r.radius_secret
             )
-            print(f"Disconnect {user.username} @ {router.mgmt_ip}: {result}")
+            print(f"Disconnect {user.username} @ {r.mgmt_ip}: {result}")
         except Exception as e:
-            print(f"Failed disconnect {user.username} @ {router.mgmt_ip}: {e}")
- 
-    return {"status": "success", "message": "User deleted"}
+            print(f"Failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
+
+    # Ambil snapshot user untuk response sebelum dihapus
+    response_user = UserResponse.from_orm(user)
+
+    # Hapus user permanen
+    db.delete(user)
+    db.commit()
+
+    return response_user
+
