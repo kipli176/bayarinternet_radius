@@ -6,7 +6,7 @@ from uuid import UUID
 class RouterBase(BaseModel):
     name: str
     router_identity: Optional[str]
-    mgmt_ip: str  
+    mgmt_ip: Optional[str] = None  
     radius_secret: str
     is_active: Optional[bool] = True   # ✅ ditambahkan
 
