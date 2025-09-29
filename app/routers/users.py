@@ -88,8 +88,7 @@ def get_user(user_id: str, db: Session = Depends(get_db), reseller=Depends(get_c
     return user
 
 # ✏️ update PPP user
-# ✏️ update PPP user
-@router.patch("/{user_id}", response_model=UserResponse)
+# ✏️ update PPP user@router.patch("/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: str,
     payload: UserUpdate,
@@ -105,39 +104,41 @@ def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     # update fields
-
-    # update fields
     for key, value in payload.dict(exclude_unset=True).items():
         if key == "password":
             setattr(user, "password_hash", value)
         else:
             setattr(user, key, value)
 
-    # jika status diubah → perlakukan sesuai aturan
+    # --- tambahan logic status ---
     if payload.status:
-        if payload.status.lower() == "suspended":
-            # set profile pool isolir
-            isolir_profile = db.query(models.profile.PPPProfile).filter(
-                models.profile.PPPProfile.name == "pool_isolir"
-            ).first()
-            if isolir_profile:
-                user.profile_id = isolir_profile.id
+        status = payload.status.lower()
+        if status == "suspended":
+            # pindahkan pool ke isolir
+            user.pool = "pool_isolir"
 
-        elif payload.status.lower() == "expired":
-            # disable user
-            user.is_active = False
+        elif status == "expired":
+            # disable / reject user
+            user.disabled = True
+            user.status = "disabled"
+
+        elif status == "active":
+            # jika diaktifkan kembali, munculkan log (nanti bisa ganti WA notif)
+            print(f"[LOG] User {user.username} diaktifkan kembali oleh reseller {reseller.id}")
 
     # audit trigger
-    db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
+    db.execute(
+        text("SELECT set_config('app.current_user', :uid, true)"),
+        {"uid": str(reseller.id)}
+    )
     db.commit()
     db.refresh(user)
 
-    # jika status diubah jadi suspended/disable → coba disconnect di semua router reseller    
-    if payload.status and payload.status.lower() in ["suspended", "expired", "disabled"]:
+    # jika status diubah jadi suspended/disable → coba disconnect di semua router reseller
+    if payload.status and payload.status.lower() in ["suspended", "disabled", "expired"]:
         routers = db.query(models.router.MikrotikRouter).filter(
             models.router.MikrotikRouter.reseller_id == reseller.id
         ).all()
-        print(routers)
         for r in routers:
             try:
                 result = coa.disconnect_user(
