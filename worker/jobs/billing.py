@@ -198,22 +198,17 @@ def generate_invoice_for_reseller(db: Session, reseller, period_start: datetime,
 def generate_invoices_h_minus_7(today: date | None = None, force: bool = False):
     if today is None:
         today = datetime.utcnow().date()
-    """
-    Worker otomatis H-7 sebelum akhir bulan:
-    - Loop semua reseller aktif
-    - Generate invoice kalau belum ada (atau sudah ada tapi belum paid)
-    """
+
+    # hitung last day bulan ini
+    if today.month == 12:
+        next_month = date(today.year + 1, 1, 1)
+    else:
+        next_month = date(today.year, today.month + 1, 1)
+    last_day = next_month - timedelta(days=1)
 
     # skip kalau bukan H-7, kecuali dipaksa
-    if not force:
-        # cari last day bulan ini
-        if today.month == 12:
-            next_month = date(today.year + 1, 1, 1)
-        else:
-            next_month = date(today.year, today.month + 1, 1)
-        last_day = next_month - timedelta(days=1)
-        if today != last_day - timedelta(days=7):
-            return
+    if not force and today != last_day - timedelta(days=7):
+        return
 
     period_start = datetime.combine(today.replace(day=1), datetime.min.time())
     period_end = datetime.combine(last_day, datetime.min.time())
