@@ -14,7 +14,7 @@ from app.utils.responses import success_response, error_response
 router = APIRouter()
 
 # ➕ tambah profil PPP
-@router.post("/", response_model=ProfileResponse)
+@router.post("", response_model=ProfileResponse)
 def create_profile(payload: ProfileCreate, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     profile = models.profile.PPPProfile(
         reseller_id=reseller.id,
