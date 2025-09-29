@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from app.database import get_db
 from app import models
+from app.schemas import reseller
 from app.schemas.auth import LoginRequest, LoginResponse 
 from app.schemas.reseller import ResellerCreate, ResellerResponse
 from app.utils import security
@@ -39,7 +40,7 @@ def register_reseller(payload: ResellerCreate, db: Session = Depends(get_db)):
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.commit()
     db.refresh(reseller)
-    return success_response(ResellerResponse.from_orm(reseller).dict(), "Reseller registered successfully", 201)
+    return success_response(ResellerResponse.from_orm(reseller), "Reseller registered successfully", 201)
 
 # login reseller
 @router.post("/login", response_model=LoginResponse)
