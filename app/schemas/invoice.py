@@ -1,8 +1,8 @@
-# app/schemas/invoice.py
 from pydantic import BaseModel
+from typing import Optional, Any
 from datetime import datetime
-from typing import Optional, Dict, Any
 from uuid import UUID
+
 
 class InvoiceBase(BaseModel):
     period_start: datetime
@@ -13,21 +13,25 @@ class InvoiceBase(BaseModel):
     discount: Optional[float] = 0
     tax: Optional[float] = 0
     total: float
-    currency: str = "IDR"
-    meta: Optional[Dict[str, Any]]
+    currency: Optional[str] = "IDR"
+    status: Optional[str] = "draft"   # langsung string enum dari DB
+    meta: Optional[Any] = None        # snapshot reseller info
 
-class InvoiceCreate(BaseModel):
-    period_start: datetime
-    period_end: datetime
+
+class InvoiceCreate(InvoiceBase):
+    pass
+
 
 class InvoiceUpdate(BaseModel):
-    status: Optional[str]
+    status: Optional[str] = None
+
 
 class InvoiceResponse(InvoiceBase):
     id: UUID
     reseller_id: UUID
     status: str
     created_at: datetime
+    updated_at: datetime
 
     class Config:
         orm_mode = True

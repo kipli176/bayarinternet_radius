@@ -44,6 +44,18 @@ def format_user_activated(user) -> str:
         f"Selamat berselancar 🌐"
     )
 
+
+def format_invoice_generated_reseller(reseller, invoice) -> str:
+    return (
+        f"Halo {reseller.name},\n"
+        f"🧾 *Invoice Baru* telah dibuat.\n\n"
+        f"📅 Periode: {invoice.period_start.strftime('%d-%m-%Y')} "
+        f"s/d {invoice.period_end.strftime('%d-%m-%Y')}\n"
+        f"👥 Jumlah User: {invoice.users_count}\n"
+        f"💵 Total Tagihan: {invoice.currency} {int(invoice.total):,}\n\n"
+        f"Silakan lakukan pembayaran sebelum jatuh tempo 🙏"
+    )
+
 def format_invoice_paid_message(invoice, is_customer=False, user=None, profile=None):
     if is_customer and user and profile:
         months_paid = max(1, round(invoice.amount / float(profile.price or 1)))
