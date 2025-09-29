@@ -1,6 +1,6 @@
 import uuid
-from sqlalchemy import Column, Integer, Numeric, Text, DateTime, ForeignKey, JSON
-from sqlalchemy.dialects.postgresql import UUID, ENUM
+from sqlalchemy import Column, Integer, Numeric, Text, DateTime, ForeignKey, JSON, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from app.database import Base
 from .mixins import TimestampMixin
@@ -29,5 +29,5 @@ class Invoice(Base, TimestampMixin):
     total = Column(Numeric(14, 2), nullable=False)
 
     currency = Column(Text, nullable=False, default="IDR")
-    status = Column(ENUM(name="invoice_status", create_type=False), nullable=False, default="draft")
+    status = Column(String, nullable=False, default="unpaid") 
     meta = Column(JSON, nullable=True)
