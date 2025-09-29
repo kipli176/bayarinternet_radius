@@ -15,7 +15,7 @@ from app.routers.resellers import get_current_reseller
 router = APIRouter()
 
 # ➕ tambah PPP user
-@router.post("/", response_model=UserResponse)
+@router.post("", response_model=UserResponse)
 def create_user(payload: UserCreate, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     existing = db.query(models.user.PPPUser).filter(
         models.user.PPPUser.reseller_id == reseller.id,
