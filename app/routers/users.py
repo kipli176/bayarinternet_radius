@@ -103,7 +103,7 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Simpan status lama
+    # simpan status lama
     old_status = user.status
 
     # update fields
@@ -118,8 +118,8 @@ def update_user(
     db.commit()
     db.refresh(user)
 
-    # Cek jika ada perubahan status → lakukan disconnect
-    if payload.status and payload.status.lower() != old_status.lower():
+    # jika status diubah dan berbeda dengan status lama, disconnect
+    if payload.status and payload.status != old_status:
         routers = db.query(models.router.MikrotikRouter).filter(
             models.router.MikrotikRouter.reseller_id == reseller.id
         ).all()
@@ -132,7 +132,7 @@ def update_user(
                 )
                 print(f"Disconnect {user.username} @ {r.mgmt_ip}: {result}")
             except Exception as e:
-                print(f"Failed to disconnect {user.username} @ {r.mgmt_ip}: {e}")
+                print(f"Failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
 
     return user
 
