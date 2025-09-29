@@ -12,7 +12,7 @@ from app.routers.resellers import get_current_reseller
 router = APIRouter()
 
 # ➕ tambah router baru
-@router.post("/", response_model=RouterResponse)
+@router.post("", response_model=RouterResponse)
 def create_router(payload: RouterCreate, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     router_obj = models.router.MikrotikRouter(
         reseller_id=reseller.id,
