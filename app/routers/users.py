@@ -105,11 +105,27 @@ def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     # update fields
+
+    # update fields
     for key, value in payload.dict(exclude_unset=True).items():
         if key == "password":
             setattr(user, "password_hash", value)
         else:
             setattr(user, key, value)
+
+    # jika status diubah → perlakukan sesuai aturan
+    if payload.status:
+        if payload.status.lower() == "suspended":
+            # set profile pool isolir
+            isolir_profile = db.query(models.profile.PPPProfile).filter(
+                models.profile.PPPProfile.name == "pool_isolir"
+            ).first()
+            if isolir_profile:
+                user.profile_id = isolir_profile.id
+
+        elif payload.status.lower() == "expired":
+            # disable user
+            user.is_active = False
 
     # audit trigger
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
