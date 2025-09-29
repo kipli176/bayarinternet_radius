@@ -88,7 +88,8 @@ def get_user(user_id: str, db: Session = Depends(get_db), reseller=Depends(get_c
     return user
 
 # ✏️ update PPP user
-# ✏️ update PPP user@router.patch("/{user_id}", response_model=UserResponse)
+# ✏️ update PPP user
+@router.patch("/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: str,
     payload: UserUpdate,
