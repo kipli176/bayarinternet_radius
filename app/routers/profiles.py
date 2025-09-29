@@ -7,15 +7,15 @@ from sqlalchemy import text
 
 from app.database import get_db
 from app import models
-from app.schemas.profile import ProfileCreate, ProfileUpdate, ProfileResponse
+from app.schemas.profile import PPPProfileBase, PPPProfileCreate, PPPProfileUpdate, PPPProfileResponse
 from app.routers.resellers import get_current_reseller
 from app.utils.responses import success_response, error_response
 
 router = APIRouter()
 
 # ➕ tambah profil PPP
-@router.post("", response_model=ProfileResponse)
-def create_profile(payload: ProfileCreate, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
+@router.post("", response_model=PPPProfileResponse)
+def create_profile(payload: PPPProfileCreate, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     profile = models.profile.PPPProfile(
         reseller_id=reseller.id,
         name=payload.name,
@@ -40,7 +40,7 @@ def create_profile(payload: ProfileCreate, db: Session = Depends(get_db), resell
     return success_response(profile, "Profile created successfully", 201)
 
 # 📋 daftar semua profil reseller
-@router.get("", response_model=List[ProfileResponse])
+@router.get("", response_model=List[PPPProfileResponse])
 def list_profiles(db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     return success_response(db.query(models.profile.PPPProfile).filter(
         models.profile.PPPProfile.reseller_id == reseller.id,
@@ -48,7 +48,7 @@ def list_profiles(db: Session = Depends(get_db), reseller=Depends(get_current_re
     ).all(), "Profiles retrieved successfully")
 
 # 🔎 detail profil
-@router.get("/{profile_id}", response_model=ProfileResponse)
+@router.get("/{profile_id}", response_model=PPPProfileResponse)
 def get_profile(profile_id: str, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     profile = db.query(models.profile.PPPProfile).filter(
         models.profile.PPPProfile.id == profile_id,
@@ -60,8 +60,8 @@ def get_profile(profile_id: str, db: Session = Depends(get_db), reseller=Depends
     return success_response(profile, "Profile retrieved successfully")
 
 # ✏️ update profil
-@router.patch("/{profile_id}", response_model=ProfileResponse)
-def update_profile(profile_id: str, payload: ProfileUpdate, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
+@router.patch("/{profile_id}", response_model=PPPProfileResponse)
+def update_profile(profile_id: str, payload: PPPProfileUpdate, db: Session = Depends(get_db), reseller=Depends(get_current_reseller)):
     profile = db.query(models.profile.PPPProfile).filter(
         models.profile.PPPProfile.id == profile_id,
         models.profile.PPPProfile.reseller_id == reseller.id,
