@@ -115,11 +115,13 @@ def update_user(
     if payload.status:
         status = payload.status.lower()
         if status == "suspended":
-            # pindahkan pool ke isolir
+            # hanya pindahkan pool
             user.pool = "pool_isolir"
+            user.disabled = False   # pastikan tidak dianggap disable
+            user.status = "suspended"
 
         elif status == "expired":
-            # disable / reject user
+            # expired benar-benar disable
             user.disabled = True
             user.status = "disabled"
 
