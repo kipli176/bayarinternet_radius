@@ -29,8 +29,8 @@ async def main():
 
     scheduler.add_job(
         billing.generate_invoices_h_minus_7,
-        "date",
-        run_date=datetime.utcnow() + timedelta(minutes=5),
+        "interval",
+        minutes=5,
         kwargs={"force": True}
     )
     scheduler.add_job(billing.generate_invoices_h_minus_7, "cron", hour=7, minute=0)
