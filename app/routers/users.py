@@ -170,6 +170,7 @@ def delete_user(
     response_user = UserResponse.from_orm(user)
 
     # Hapus user permanen
+    db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.delete(user)
     db.commit()
 
