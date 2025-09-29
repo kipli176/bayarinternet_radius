@@ -26,7 +26,11 @@ logger = logging.getLogger("worker")
 
 async def main():
     scheduler = AsyncIOScheduler(timezone="Asia/Jakarta")
-
+    scheduler.add_job(
+        billing.mark_overdue_invoices,
+        "interval",
+        minutes=2
+    )
     scheduler.add_job(
         billing.generate_invoices_h_minus_7,
         "interval",

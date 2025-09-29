@@ -12,21 +12,18 @@ from app.utils import coa
 import logging
 
 logger = logging.getLogger("worker.jobs.billing")
-
 def mark_overdue_invoices():
     """
     Tanggal 1 setiap bulan:
       - Semua customer invoice yang belum paid dan period_end < today => set 'overdue'
       - User terkait => set status 'suspended'
       - Kirim WA pemberitahuan suspend
-      - (Opsional) Kirim Disconnect-Request (CoA) agar sesi langsung terputus
+      - (Opsional) Kirim Disconnect-Request (CoA)
     """
     db: Session = SessionLocal()
     try:
-        # gunakan UTC date; scheduler kita timezone Asia/Jakarta di main.py
         today = datetime.utcnow().date()
 
-        # ambil semua invoice customer yang sudah melewati period_end & belum paid
         invoices = db.query(models.customer_invoice.CustomerInvoice).filter(
             and_(
                 models.customer_invoice.CustomerInvoice.status != "paid",
@@ -37,26 +34,32 @@ def mark_overdue_invoices():
         logger.info(f"[mark_overdue_invoices] {len(invoices)} invoice ditemukan untuk ditandai overdue.")
 
         for inv in invoices:
-            # tandai overdue (hindari overwrite jika sudah overdue)
+            # update invoice status
             if inv.status != "overdue":
                 inv.status = "overdue"
+                db.add(inv)
 
-            # suspend user
+            # ambil user
             user = db.query(models.user.PPPUser).filter(
                 models.user.PPPUser.id == inv.user_id
             ).first()
 
-            # ambil reseller (untuk CoA & info lain)
+            # ambil reseller
             reseller = db.query(models.reseller.Reseller).filter(
                 models.reseller.Reseller.id == inv.reseller_id
             ).first()
 
             if user and user.status != "suspended":
                 user.status = "suspended"
+                db.add(user)
+
+                db.commit()
+                db.refresh(user)
+                db.refresh(inv)
 
                 logger.info(f"[mark_overdue_invoices] User {user.username} disuspend (invoice {inv.id}).")
 
-                # kirim WA info suspend
+                # kirim WA
                 if user.phone:
                     try:
                         period = f"{inv.period_start.strftime('%d-%m-%Y')} s/d {inv.period_end.strftime('%d-%m-%Y')}"
@@ -69,12 +72,11 @@ def mark_overdue_invoices():
                             f"Silakan lakukan pembayaran untuk mengaktifkan kembali layanan. Terima kasih 🙏"
                         )
                         send_whatsapp(user.phone, msg)
-
                         logger.info(f"[mark_overdue_invoices] WA notif suspend terkirim ke {user.username} ({user.phone})")
                     except Exception as e:
                         logger.error(f"[mark_overdue_invoices] Gagal kirim WA ke {user.username}: {e}")
 
-                # OPSIONAL: CoA disconnect semua NAS milik reseller
+                # opsional: CoA disconnect
                 if reseller:
                     routers = db.query(models.router.MikrotikRouter).filter(
                         models.router.MikrotikRouter.reseller_id == reseller.id,
@@ -89,15 +91,12 @@ def mark_overdue_invoices():
                                 secret=r.radius_secret
                             )
                         except Exception as e:
-                            # log saja; jangan menghalangi commit suspend
-                            print(f"CoA failed {user.username} @ {r.mgmt_ip}: {e}")
+                            logger.warning(f"CoA failed {user.username} @ {r.mgmt_ip}: {e}")
 
-        db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
-        db.commit()
+        logger.info("[mark_overdue_invoices] selesai")
 
     except Exception as e:
         logger.exception(f"[mark_overdue_invoices] ERROR: {e}")
-        print(f"[worker] mark_overdue_invoices error: {e}")
         db.rollback()
     finally:
         db.close()
