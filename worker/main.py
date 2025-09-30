@@ -50,14 +50,7 @@ async def main():
 
     # Tanggal 1: suspend semua yang masih unpaid
     scheduler.add_job(customer_billing.suspend_unpaid_on_first, "cron", day=1, hour=7)
-
-
-    # cek NAS tiap 10 menit
-    scheduler.add_job(radius.check_nas_status, "interval", minutes=1)
-
-    # retry queue disconnect tiap 1 menit
-    scheduler.add_job(radius.process_retry_queue, "interval", minutes=1)
-
+ 
     scheduler.start()
     logger.info("Worker started...")
 
