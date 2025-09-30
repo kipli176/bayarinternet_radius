@@ -10,11 +10,12 @@ logger = logging.getLogger(__name__)
 
 # antrian retry disconnect sementara (bisa dipindah ke Redis/DB kalau mau durable)
 retry_queue = []
-
+ 
 
 def check_nas_status():
     """
-    Periksa semua MikrotikRouter aktif di DB, test koneksi RADIUS pakai coa.test_connection().
+    Periksa semua MikrotikRouter aktif di DB, test koneksi RADIUS,
+    lalu simpan hasil ke nas_status_logs.
     """
     db: Session = SessionLocal()
     try:
@@ -24,17 +25,39 @@ def check_nas_status():
         ).all()
 
         for r in routers:
+            status = "fail"
+            message = None
             try:
                 ok = coa.test_connection(str(r.mgmt_ip), r.radius_secret)
                 if ok:
-                    logger.info(f"[NAS check] {r.name} ({r.mgmt_ip}) ✅ OK")
+                    status = "ok"
                 else:
-                    logger.warning(f"[NAS check] {r.name} ({r.mgmt_ip}) ❌ Unexpected reply")
+                    message = "Unexpected reply"
             except Exception as e:
-                logger.warning(f"[NAS check] {r.name} ({r.mgmt_ip}) ❌ FAILED: {e}")
+                message = str(e)
 
+            # log ke console
+            if status == "ok":
+                logger.info(f"[NAS check] {r.name} ({r.mgmt_ip}) ✅ OK")
+            else:
+                logger.warning(f"[NAS check] {r.name} ({r.mgmt_ip}) ❌ {message}")
+
+            # simpan ke DB
+            log = models.nas_status_log.NasStatusLog(
+                router_id=r.id,
+                status=status,
+                message=message
+            )
+            db.add(log)
+
+        db.commit()
+
+    except Exception as e:
+        logger.exception(f"[NAS check] ERROR: {e}")
+        db.rollback()
     finally:
         db.close()
+
 
 
 def safe_disconnect(username: str, nas_ip: str, secret: str, retries: int = 3, delay: int = 2):
