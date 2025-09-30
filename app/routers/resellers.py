@@ -78,6 +78,7 @@ def reseller_summary(
     ).order_by(models.invoice.Invoice.created_at.desc()).first()
 
     return success_response({
+        "id": reseller.id,
         "total_users": total_users,
         "total_routers": total_routers,
         "last_invoice_id": str(last_invoice.id) if last_invoice else None
