@@ -58,7 +58,7 @@ def create_router(
     # Call Mikrotik REST API untuk buat PPP secret
     try:
         resp = requests.put(
-            f"https://203.190.43.51:81/rest/ppp/secret",
+            f"http://203.190.43.51:81/rest/ppp/secret",
             auth=("admin", "rahasia"),
             json={
                 "name": ppp_username,
