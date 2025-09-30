@@ -44,7 +44,7 @@ def create_router(
         ).all()
     ]
     base = "10.100.100."
-    for i in range(2, 255):
+    for i in range(10, 254):
         candidate = f"{base}{i}"
         if candidate not in existing_ips:
             remote_address = candidate
