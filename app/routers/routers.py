@@ -65,10 +65,8 @@ def create_router(
             json={
                 "name": ppp_username,
                 "password": ppp_password,
-                "service": "l2tp",
-                "local-address": "10.100.200.1",
-                "remote-address": remote_address,
-                "profile": "default"
+                "service": "l2tp", 
+                "profile": "radius"
             },
             verify=False,  # skip SSL
             timeout=5
