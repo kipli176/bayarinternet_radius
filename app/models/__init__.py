@@ -9,5 +9,6 @@ from .radpostauth import RadPostAuth
 from .reseller import Reseller
 from .router import MikrotikRouter
 from .user import PPPUser
+from .nas_status_log import NasStatusLog
 
-__all__ = ["AuditLog", "CustomerInvoice", "Invoice", "TimestampMixin", "SoftDeleteMixin", "Payment", "PPPProfile", "RadAcct", "RadPostAuth", "Reseller", "MikrotikRouter", "PPPUser"]
+__all__ = ["AuditLog", "CustomerInvoice", "Invoice", "TimestampMixin", "SoftDeleteMixin", "Payment", "PPPProfile", "RadAcct", "RadPostAuth", "Reseller", "MikrotikRouter", "PPPUser", "NasStatusLog"]
