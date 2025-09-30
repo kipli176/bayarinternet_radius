@@ -85,7 +85,7 @@ def test_connection_all(nas_ip: str, secret: str, timeout: int = 3):
     Return dict hasil per port.
     """
     results = {}
-    for port in (1812, 1813, 3799):
+    for port in (11812, 11813, 3799):
         try:
             ok = _send_status_server(nas_ip, secret, port, timeout=timeout)
             results[port] = "ok" if ok else "unexpected-reply"
