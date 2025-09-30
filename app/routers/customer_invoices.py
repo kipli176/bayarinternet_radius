@@ -19,6 +19,16 @@ logger = logging.getLogger("app.routers.customer_invoices")
 
 router = APIRouter()
 
+def _add_months_keep_dom(base_date, months: int):
+    """Tambah bulan mempertahankan day-of-month. Clamp ke akhir bulan kalau DOM tidak ada."""
+    from calendar import monthrange
+    y, m = base_date.year, base_date.month
+    m += months
+    y += (m - 1) // 12
+    m = ((m - 1) % 12) + 1
+    day = min(base_date.day, monthrange(y, m)[1])
+    return base_date.replace(year=y, month=m, day=day)
+
 # ➕ buat customer invoice
 # Default (1 bulan):
 
@@ -49,7 +59,7 @@ def create_customer_invoice(
     db: Session = Depends(get_db),
     reseller=Depends(get_current_reseller),
 ):
-    # 1. Validasi user
+    # validasi user
     user = db.query(models.user.PPPUser).filter(
         models.user.PPPUser.id == payload.user_id,
         models.user.PPPUser.reseller_id == reseller.id,
@@ -66,17 +76,18 @@ def create_customer_invoice(
     if not profile:
         return error_response("Profile not found", 404)
 
-    # 2. Tentukan periode dari active_until
-    months = payload.months or 1
+    months = max(1, int(payload.months or 1))
+
+    # ✳️ Periode berdasarkan active_until
     if user.active_until:
-        base_start = user.active_until + timedelta(days=1)
+        base_date = user.active_until
     else:
-        base_start = datetime.utcnow().date()
+        base_date = datetime.utcnow().date()
 
-    period_start = datetime.combine(base_start, datetime.min.time())
-    period_end = add_months_keep_dom(period_start, months) - timedelta(days=1)
+    period_start = datetime.combine(base_date, datetime.min.time())
+    period_end = datetime.combine(_add_months_keep_dom(base_date, months), datetime.min.time())
 
-    # 3. Cegah duplikasi
+    # cek duplikat invoice
     existing = db.query(models.customer_invoice.CustomerInvoice).filter(
         models.customer_invoice.CustomerInvoice.user_id == user.id,
         models.customer_invoice.CustomerInvoice.reseller_id == reseller.id,
@@ -86,20 +97,18 @@ def create_customer_invoice(
     if existing:
         return error_response("Invoice for this period already exists", 409)
 
-    # 4. Hitung jumlah tagihan
+    # hitung nominal
     amount = Decimal(profile.price or 0) * months
 
-    # 5. Meta
-    meta = payload.meta or {
+    meta = (payload.meta or {}) | {
         "user_name": user.full_name or user.username,
         "profile_name": profile.name,
-        "price_per_month": float(profile.price),
+        "price_per_month": float(profile.price or 0),
         "months": months,
         "subtotal": float(amount),
         "currency": reseller.currency or "IDR",
     }
 
-    # 6. Simpan invoice
     invoice = models.customer_invoice.CustomerInvoice(
         reseller_id=reseller.id,
         user_id=user.id,
@@ -116,7 +125,6 @@ def create_customer_invoice(
     db.commit()
     db.refresh(invoice)
 
-    # 7. Kirim WA invoice
     if user.phone:
         try:
             msg = format_invoice_unpaid_message(invoice, user=user, profile=profile)
@@ -124,11 +132,7 @@ def create_customer_invoice(
         except Exception as e:
             logger.error(f"[create_customer_invoice] WA gagal ke {user.username}: {e}")
 
-    return success_response(
-        CustomerInvoiceResponse.from_orm(invoice),
-        "Customer invoice created successfully",
-        201
-    )
+    return success_response(CustomerInvoiceResponse.from_orm(invoice), "Customer invoice created successfully", 201)
 
 # 📋 daftar invoice customer milik reseller
 @router.get("", response_model=List[CustomerInvoiceResponse])
