@@ -50,7 +50,7 @@ def create_router(
         return error_response("No available remote-address for router", 400)
 
     # Local address = IP Mikrotik (pakai payload.mgmt_ip kalau diisi, default 192.168.88.1)
-    local_address = payload.mgmt_ip or "203.190.43.51"
+    local_address = payload.mgmt_ip or "192.168.88.1"
 
     # Password standar
     ppp_password = "12345678"
@@ -58,14 +58,15 @@ def create_router(
     # Call Mikrotik REST API untuk buat PPP secret
     try:
         resp = requests.post(
-            f"http://{local_address}:81/rest/ppp/secret",
+            f"http://203.190.43.51:81/rest/ppp/secret",
             auth=("admin", "rahasia"),  # hardcoded admin Mikrotik
             json={
                 "name": ppp_username,
                 "password": ppp_password,
                 "service": "l2tp",
                 "local-address": local_address,
-                "remote-address": remote_address
+                "remote-address": remote_address,
+                "profile": "billing"    
             },
             timeout=5
         )
