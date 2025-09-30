@@ -43,7 +43,7 @@ def create_router(
             reseller_id=reseller.id
         ).all()
     ]
-    base = "10.100.100."
+    base = "10.100.200."
     for i in range(10, 254):
         candidate = f"{base}{i}"
         if candidate not in existing_ips:
