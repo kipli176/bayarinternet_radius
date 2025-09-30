@@ -59,10 +59,6 @@ def disconnect_user(username: str, nas_ip: str, secret: str, port: int = 3799, t
 
 
 def _send_status_server(nas_ip: str, secret: str, port: int, timeout: int = 3):
-    """
-    Kirim Status-Server ke port tertentu.
-    Return: True jika ada balasan (Accept/Reject), False jika balasan lain, raise kalau timeout.
-    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     try:
@@ -71,12 +67,13 @@ def _send_status_server(nas_ip: str, secret: str, port: int, timeout: int = 3):
         resp, _ = sock.recvfrom(4096)
         code = resp[0]
         if code in (RADIUS_CODE_ACCESS_ACCEPT, RADIUS_CODE_ACCESS_REJECT):
-            return True
+            return True   # koneksi sehat, walaupun reject
         return False
     except socket.timeout:
         raise RuntimeError(f"Timeout pada port {port}")
     finally:
         sock.close()
+
 
 
 def test_connection_all(nas_ip: str, secret: str, timeout: int = 3):
@@ -85,7 +82,7 @@ def test_connection_all(nas_ip: str, secret: str, timeout: int = 3):
     Return dict hasil per port.
     """
     results = {}
-    for port in (11812, 11813, 3799):
+    for port in (1812, 1813, 3799):
         try:
             ok = _send_status_server(nas_ip, secret, port, timeout=timeout)
             results[port] = "ok" if ok else "unexpected-reply"
