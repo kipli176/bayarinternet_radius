@@ -3,7 +3,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from sched import scheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler 
-from worker.jobs import users, billing
+from worker.jobs import customer_billing, billing, radius
 from datetime import datetime, timedelta
 
 # 🔹 konfigurasi logging dengan rotasi harian
@@ -39,14 +39,24 @@ async def main():
     # )
     scheduler.add_job(billing.generate_invoices_h_minus_7, "cron", hour=7, minute=0)
 
-    # 🔔 reminder masa aktif user (H-3 sebelum active_until)
-    scheduler.add_job(users.remind_users_before_expiry, "cron", hour=8, minute=0)
-
-    # 🔔 reminder H-3 sebelum akhir bulan
-    scheduler.add_job(users.remind_users_end_of_month, "cron", hour=9, minute=0)
-
     # 🧾 cek invoice overdue tiap awal bulan
     scheduler.add_job(billing.mark_overdue_invoices, "cron", day=1, hour=7, minute=0)
+
+    # H-3 sebelum active_until (jalan tiap hari, fungsi sendiri yang memutuskan siapa yang H-3)
+    scheduler.add_job(customer_billing.generate_customer_invoices_h_minus_3, "cron", hour=1)
+
+    # H-5 sebelum akhir bulan (fungsi cek sendiri apakah hari ini = H-5 EOM)
+    scheduler.add_job(customer_billing.remind_unpaid_h_minus_5_eom, "cron", hour=8)
+
+    # Tanggal 1: suspend semua yang masih unpaid
+    scheduler.add_job(customer_billing.suspend_unpaid_on_first, "cron", day=1, hour=7)
+
+
+    # cek NAS tiap 10 menit
+    scheduler.add_job(radius.check_nas_status, "interval", minutes=10)
+
+    # retry queue disconnect tiap 1 menit
+    scheduler.add_job(radius.process_retry_queue, "interval", minutes=1)
 
     scheduler.start()
     logger.info("Worker started...")
