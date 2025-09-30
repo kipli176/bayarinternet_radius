@@ -8,8 +8,7 @@ from sqlalchemy.sql import text
 
 from app.database import SessionLocal
 from app import models
-from app.utils.wa_gateway import send_whatsapp
-from app.utils.messages import format_invoice_unpaid_message
+from app.utils.wa_gateway import send_whatsapp, format_invoice_unpaid_message 
 from app.utils import coa
 
 import logging
