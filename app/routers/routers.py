@@ -79,7 +79,7 @@ def create_router(
     router_obj = models.router.MikrotikRouter(
         name=payload.name,
         reseller_id=reseller.id,
-        mgmt_ip="10.100.100.1",  # 👈 penting: mgmt_ip = remote-address PPP
+        mgmt_ip=remote_address,  # 👈 penting: mgmt_ip = remote-address PPP
         radius_secret=payload.radius_secret,
         router_identity=payload.router_identity,
         ppp_username=ppp_username,
