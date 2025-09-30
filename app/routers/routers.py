@@ -15,26 +15,29 @@ router = APIRouter()
 
 # ➕ tambah router baru
 
+import requests
+import re
+
 def normalize_reseller_name(name: str) -> str:
     # ganti spasi & non-alfanumerik jadi underscore, lalu lowercase
     return re.sub(r'\W+', '_', name).lower()
 
-# ➕ tambah router baru
-@router.post("", response_model=dict)  # ganti response_model ke dict bebas
+@router.post("", response_model=dict)
 def create_router(
     payload: RouterCreate,
     db: Session = Depends(get_db),
     reseller=Depends(get_current_reseller)
 ):
-    # Hitung jumlah router reseller → untuk suffix username
+    # hitung router reseller untuk suffix
     count = db.query(models.router.MikrotikRouter).filter_by(
         reseller_id=reseller.id
     ).count()
 
     reseller_name = normalize_reseller_name(reseller.name)
     ppp_username = f"{reseller_name}_r{count+1}"
+    ppp_password = "12345678"
 
-    # Tentukan remote-address unik (mgmt_ip)
+    # cari remote-address unik
     existing_ips = [
         str(r.mgmt_ip) for r in db.query(models.router.MikrotikRouter).filter_by(
             reseller_id=reseller.id
@@ -49,38 +52,36 @@ def create_router(
     else:
         return error_response("No available remote-address for router", 400)
 
-    # Local address = IP Mikrotik (pakai payload.mgmt_ip kalau diisi, default 192.168.88.1)
-    local_address = payload.mgmt_ip or "192.168.88.1"
+    # target router Mikrotik
+    mikrotik_host = "203.190.43.51"  # alamat API router
+    mikrotik_user = "admin"
+    mikrotik_pass = "rahasia"
 
-    # Password standar
-    ppp_password = "12345678"
-
-    # Call Mikrotik REST API untuk buat PPP secret
+    # call Mikrotik REST API → create PPP secret
     try:
         resp = requests.put(
-            f"http://203.190.43.51:81/rest/ppp/secret",
-            auth=("admin", "rahasia"),
+            f"http://{mikrotik_host}/rest/ppp/secret",
+            auth=(mikrotik_user, mikrotik_pass),
             json={
                 "name": ppp_username,
                 "password": ppp_password,
                 "service": "l2tp",
-                "local-address": local_address,
+                "local-address": "192.168.88.1",
                 "remote-address": remote_address,
-                "profile": "billing"
+                "profile": "default"
             },
-            verify=False,  # karena sertifikat Mikrotik self-signed
+            verify=False,  # skip SSL
             timeout=5
         )
         resp.raise_for_status()
-
     except Exception as e:
         return error_response(f"Failed to create PPP secret on Mikrotik: {e}", 500)
 
-    # Simpan router ke DB, mgmt_ip diisi remote-address
+    # simpan router ke DB dengan mgmt_ip = remote_address
     router_obj = models.router.MikrotikRouter(
         name=payload.name,
         reseller_id=reseller.id,
-        mgmt_ip=remote_address,
+        mgmt_ip=remote_address,  # 👈 penting: mgmt_ip = remote-address PPP
         radius_secret=payload.radius_secret,
         router_identity=payload.router_identity,
     )
