@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.config import settings
 from app.database import engine, Base
+from fastapi.middleware.cors import CORSMiddleware
 
 # import routers (akan ditambahkan bertahap)
 from app.routers import auth, resellers, routers, profiles, users, invoices, customer_invoices, monitoring, logs, reports
@@ -14,6 +15,13 @@ app = FastAPI(
     description="API Backend untuk sistem reseller Mikrotik + Radius"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],            # Mengizinkan semua origin
+    allow_credentials=True,
+    allow_methods=["*"],            # Mengizinkan semua metode HTTP (GET, POST, dll)
+    allow_headers=["*"],           # Mengizinkan semua header
+)
 # register routers
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(resellers.router, prefix="/resellers", tags=["Resellers"])
