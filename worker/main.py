@@ -26,17 +26,17 @@ logger = logging.getLogger("worker")
 
 async def main():
     scheduler = AsyncIOScheduler(timezone="Asia/Jakarta")
-    scheduler.add_job(
-        billing.mark_overdue_invoices,
-        "interval",
-        minutes=2
-    )
-    scheduler.add_job(
-        billing.generate_invoices_h_minus_7,
-        "interval",
-        minutes=3,
-        kwargs={"force": True}
-    )
+    # scheduler.add_job(
+    #     billing.mark_overdue_invoices,
+    #     "interval",
+    #     minutes=2
+    # )
+    # scheduler.add_job(
+    #     billing.generate_invoices_h_minus_7,
+    #     "interval",
+    #     minutes=3,
+    #     kwargs={"force": True}
+    # )
     scheduler.add_job(billing.generate_invoices_h_minus_7, "cron", hour=7, minute=0)
 
     # 🔔 reminder masa aktif user (H-3 sebelum active_until)

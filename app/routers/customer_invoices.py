@@ -167,6 +167,14 @@ def update_customer_invoice(
     if not invoice:
         return error_response("Customer invoice not found", 404)
 
+    user = db.query(models.user.PPPUser).filter(
+        models.user.PPPUser.id == invoice.user_id
+    ).first()
+    profile = db.query(models.profile.PPPProfile).filter(
+        models.profile.PPPProfile.id == invoice.profile_id
+    ).first()
+
+    # ============== jika status -> PAID ==============
     if payload.status and payload.status.lower() == "paid":
         if invoice.status == "paid":
             return error_response("Invoice already paid", 400)
@@ -174,32 +182,21 @@ def update_customer_invoice(
         invoice.status = "paid"
         invoice.paid_at = datetime.utcnow()
 
-        # ambil user & profile
-        user = db.query(models.user.PPPUser).filter(
-            models.user.PPPUser.id == invoice.user_id
-        ).first()
-        profile = db.query(models.profile.PPPProfile).filter(
-            models.profile.PPPProfile.id == invoice.profile_id
-        ).first()
-
-        if user and profile:
+        if user:
             old_status = user.status
 
-            # ⏩ set active_until langsung ke akhir periode invoice
+            # extend masa aktif ke invoice.period_end
             user.active_until = invoice.period_end.date()
 
-            # kalau sebelumnya suspended → aktifkan
+            # aktifkan kembali jika suspended
             if user.status == "suspended":
                 user.status = "active"
 
-            db.execute(
-                text("SELECT set_config('app.current_user', :uid, true)"),
-                {"uid": str(reseller.id)},
-            )
+            db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
             db.commit()
             db.refresh(user)
 
-            # disconnect hanya jika status berubah
+            # disconnect session lama
             if user.status != old_status:
                 routers = db.query(models.router.MikrotikRouter).filter(
                     models.router.MikrotikRouter.reseller_id == reseller.id,
@@ -208,27 +205,53 @@ def update_customer_invoice(
                 ).all()
                 for r in routers:
                     try:
-                        result = coa.disconnect_user(
-                            username=user.username,
-                            nas_ip=str(r.mgmt_ip),
-                            secret=r.radius_secret,
-                        )
-                        print(f"Disconnect {user.username} @ {r.mgmt_ip}: {result}")
+                        coa.disconnect_user(user.username, str(r.mgmt_ip), r.radius_secret)
                     except Exception as e:
-                        print(f"Failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
+                        print(f"Disconnect failed {user.username} @ {r.mgmt_ip}: {e}")
 
             # kirim WA konfirmasi pembayaran
-            if user.phone:
+            if user.phone and profile:
                 try:
                     msg = format_invoice_paid_message(invoice, user=user, profile=profile)
                     send_whatsapp(user.phone, msg)
                 except Exception as e:
                     logger.error(f"[update_customer_invoice] WA gagal ke {user.username}: {e}")
 
-    db.execute(
-        text("SELECT set_config('app.current_user', :uid, true)"),
-        {"uid": str(reseller.id)},
-    )
+    # ============== jika status -> UNPAID (rollback) ==============
+    elif payload.status and payload.status.lower() == "unpaid":
+        if invoice.status != "paid":
+            return error_response("Only paid invoices can be rolled back to unpaid", 400)
+
+        invoice.status = "unpaid"
+        invoice.paid_at = None
+
+        if user:
+            # kembalikan active_until ke sebelum invoice berlaku
+            rollback_date = (invoice.period_start - timedelta(days=1)).date()
+            user.active_until = rollback_date
+
+            # suspend user lagi
+            user.status = "suspended"
+
+            db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
+            db.commit()
+            db.refresh(user)
+
+            # kirim WA info rollback (opsional)
+            if user.phone:
+                try:
+                    msg = (
+                        f"Halo {user.full_name or user.username},\n"
+                        f"⚠️ Pembayaran pada invoice {invoice.id} telah dibatalkan.\n\n"
+                        f"Layanan Anda kembali dalam status *SUSPEND*.\n"
+                        f"Silakan hubungi admin jika ada kesalahan.\n"
+                    )
+                    send_whatsapp(user.phone, msg)
+                except Exception as e:
+                    logger.error(f"[update_customer_invoice] WA rollback gagal ke {user.username}: {e}")
+
+    # audit & simpan
+    db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.commit()
     db.refresh(invoice)
 
