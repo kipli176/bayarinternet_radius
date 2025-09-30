@@ -66,7 +66,7 @@ def create_router(
                 "service": "l2tp",
                 "local-address": local_address,
                 "remote-address": remote_address,
-                "profile": "default"
+                "profile": "billing"
             },
             verify=False,  # karena sertifikat Mikrotik self-signed
             timeout=5
