@@ -66,7 +66,7 @@ def create_customer_invoice(
     if not profile:
         return error_response("Profile not found", 404)
 
-    # 2. Tentukan periode berdasarkan active_until
+    # 2. Tentukan periode dari active_until
     months = payload.months or 1
     if user.active_until:
         base_start = user.active_until + timedelta(days=1)
@@ -76,15 +76,20 @@ def create_customer_invoice(
     period_start = datetime.combine(base_start, datetime.min.time())
     period_end = add_months_keep_dom(period_start, months) - timedelta(days=1)
 
-    # contoh:
-    # active_until = 2025-09-30
-    # months = 1 -> period_start = 2025-10-01, period_end = 2025-10-30
-    # months = 2 -> period_start = 2025-10-01, period_end = 2025-11-30
+    # 3. Cegah duplikasi
+    existing = db.query(models.customer_invoice.CustomerInvoice).filter(
+        models.customer_invoice.CustomerInvoice.user_id == user.id,
+        models.customer_invoice.CustomerInvoice.reseller_id == reseller.id,
+        models.customer_invoice.CustomerInvoice.period_start == period_start,
+        models.customer_invoice.CustomerInvoice.period_end == period_end,
+    ).first()
+    if existing:
+        return error_response("Invoice for this period already exists", 409)
 
-    # 3. Hitung jumlah tagihan
+    # 4. Hitung jumlah tagihan
     amount = Decimal(profile.price or 0) * months
 
-    # 4. Meta untuk nota
+    # 5. Meta
     meta = payload.meta or {
         "user_name": user.full_name or user.username,
         "profile_name": profile.name,
@@ -94,7 +99,7 @@ def create_customer_invoice(
         "currency": reseller.currency or "IDR",
     }
 
-    # 5. Simpan invoice
+    # 6. Simpan invoice
     invoice = models.customer_invoice.CustomerInvoice(
         reseller_id=reseller.id,
         user_id=user.id,
@@ -107,14 +112,11 @@ def create_customer_invoice(
     )
 
     db.add(invoice)
-    db.execute(
-        text("SELECT set_config('app.current_user', :uid, true)"),
-        {"uid": str(reseller.id)},
-    )
+    db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.commit()
     db.refresh(invoice)
 
-    # 6. Kirim WA tagihan
+    # 7. Kirim WA invoice
     if user.phone:
         try:
             msg = format_invoice_unpaid_message(invoice, user=user, profile=profile)
