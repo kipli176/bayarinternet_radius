@@ -84,6 +84,8 @@ def create_router(
         mgmt_ip=remote_address,  # 👈 penting: mgmt_ip = remote-address PPP
         radius_secret=payload.radius_secret,
         router_identity=payload.router_identity,
+        ppp_username=ppp_username,
+        ppp_password=ppp_password
     )
     db.add(router_obj)
     db.commit()

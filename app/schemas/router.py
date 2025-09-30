@@ -24,6 +24,8 @@ class RouterResponse(RouterBase):
     id: UUID
     is_active: bool
     created_at: datetime
+    ppp_username: Optional[str]
+    ppp_password: Optional[str]
 
     class Config:
         orm_mode = True

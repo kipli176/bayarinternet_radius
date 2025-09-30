@@ -18,3 +18,5 @@ class MikrotikRouter(Base, TimestampMixin, SoftDeleteMixin):
     radius_secret = Column(String, nullable=False)
 
     is_active = Column(Boolean, nullable=False, default=True)  # ✅ tetap dipakai
+    ppp_username = Column(String, nullable=True)
+    ppp_password = Column(String, nullable=True)
