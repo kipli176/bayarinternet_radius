@@ -156,6 +156,9 @@ def delete_user(
     routers = db.query(models.router.MikrotikRouter).filter(
         models.router.MikrotikRouter.reseller_id == reseller.id
     ).all()
+    disconnect_success = 0
+    disconnect_failed = []
+
     for r in routers:
         try:
             result = coa.disconnect_user(
@@ -164,16 +167,36 @@ def delete_user(
                 secret=r.radius_secret
             )
             print(f"Disconnect {user.username} @ {r.mgmt_ip}: {result}")
+            disconnect_success += 1
         except Exception as e:
             print(f"Failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
+            disconnect_failed.append(str(r.mgmt_ip))
 
-    # Ambil snapshot user untuk response sebelum dihapus
+    # Cek apakah semua gagal
+    if disconnect_success == 0:
+        return error_response(
+            "Gagal memutuskan koneksi user dari semua router. Penghapusan dibatalkan.",
+            500
+        )
+
+    # Jika sampai sini, berarti minimal 1 berhasil disconnect
+    # Lanjutkan proses delete
     response_user = UserResponse.from_orm(user)
 
-    # Hapus user permanen
-    db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
+    db.execute(
+        text("SELECT set_config('app.current_user', :uid, true)"),
+        {"uid": str(reseller.id)}
+    )
     db.delete(user)
     db.commit()
 
+    # Tambahkan warning jika ada router yang gagal disconnect
+    if disconnect_failed:
+        return success_response(
+            response_user,
+            f"User deleted. Namun gagal disconnect dari router: {', '.join(disconnect_failed)}"
+        )
+
     return success_response(response_user, "User deleted successfully")
+
 

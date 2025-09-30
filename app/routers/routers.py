@@ -66,7 +66,7 @@ def create_router(
                 "name": ppp_username,
                 "password": ppp_password,
                 "service": "l2tp",
-                "local-address": "192.168.88.1",
+                "local-address": "10.100.200.1",
                 "remote-address": remote_address,
                 "profile": "default"
             },
@@ -81,7 +81,7 @@ def create_router(
     router_obj = models.router.MikrotikRouter(
         name=payload.name,
         reseller_id=reseller.id,
-        mgmt_ip=remote_address,  # 👈 penting: mgmt_ip = remote-address PPP
+        mgmt_ip="10.100.100.1",  # 👈 penting: mgmt_ip = remote-address PPP
         radius_secret=payload.radius_secret,
         router_identity=payload.router_identity,
         ppp_username=ppp_username,
