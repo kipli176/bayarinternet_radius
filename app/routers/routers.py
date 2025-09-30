@@ -57,20 +57,21 @@ def create_router(
 
     # Call Mikrotik REST API untuk buat PPP secret
     try:
-        resp = requests.post(
-            f"http://203.190.43.51:81/rest/ppp/secret",
-            auth=("admin", "rahasia"),  # hardcoded admin Mikrotik
+        resp = requests.put(
+            f"https://{local_address}/rest/ppp/secret",
+            auth=("admin", "rahasia"),
             json={
                 "name": ppp_username,
                 "password": ppp_password,
                 "service": "l2tp",
-                "local-address": local_address,
                 "remote-address": remote_address,
-                "profile": "billing"    
+                "profile": "default"
             },
+            verify=False,  # karena sertifikat Mikrotik self-signed
             timeout=5
         )
         resp.raise_for_status()
+
     except Exception as e:
         return error_response(f"Failed to create PPP secret on Mikrotik: {e}", 500)
 
