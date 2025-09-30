@@ -58,7 +58,7 @@ def disconnect_user(username: str, nas_ip: str, secret: str, port: int = 3799, t
         sock.close()
 
 
-def test_connection(nas_ip: str, secret: str, port: int = 11812, timeout: int = 3):
+def test_connection(nas_ip: str, secret: str, port: int = 1812, timeout: int = 3):
     """
     Uji koneksi ke NAS:
       1) coba Status-Server (Code=12)
