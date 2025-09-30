@@ -58,47 +58,37 @@ def disconnect_user(username: str, nas_ip: str, secret: str, port: int = 3799, t
         sock.close()
 
 
-def test_connection(nas_ip: str, secret: str, port: int = 1812, timeout: int = 3):
+def _send_status_server(nas_ip: str, secret: str, port: int, timeout: int = 3):
     """
-    Uji koneksi ke NAS:
-      1) coba Status-Server (Code=12)
-      2) fallback Access-Request dummy
+    Kirim Status-Server ke port tertentu.
+    Return: True jika ada balasan (Accept/Reject), False jika balasan lain, raise kalau timeout.
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     try:
-        # ---------- Status-Server ----------
-        packet = build_radius_packet(RADIUS_CODE_STATUS_SERVER, 1, secret, [
-            (4, nas_ip)  # NAS-IP-Address
-        ])
-        sock.sendto(packet, (nas_ip, port))
-        resp, _ = sock.recvfrom(4096)
-        code = resp[0]
-        if code == RADIUS_CODE_ACCESS_ACCEPT:
-            return True
-        elif code == RADIUS_CODE_ACCESS_REJECT:
-            # NAS menolak, tapi artinya koneksi OK
-            return True
-    except socket.timeout:
-        # fallback ke Access-Request
-        pass
-    finally:
-        sock.close()
-
-    # ---------- Fallback Access-Request dummy ----------
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(timeout)
-    try:
-        packet = build_radius_packet(1, 1, secret, [  # 1 = Access-Request
-            (1, "__ping__"),  # User-Name
-        ])
-        sock.sendto(packet, (nas_ip, port))
+        pkt = build_radius_packet(RADIUS_CODE_STATUS_SERVER, 1, secret, [(4, nas_ip)])
+        sock.sendto(pkt, (nas_ip, port))
         resp, _ = sock.recvfrom(4096)
         code = resp[0]
         if code in (RADIUS_CODE_ACCESS_ACCEPT, RADIUS_CODE_ACCESS_REJECT):
             return True
         return False
     except socket.timeout:
-        raise RuntimeError("RADIUS test_connection timeout")
+        raise RuntimeError(f"Timeout pada port {port}")
     finally:
         sock.close()
+
+
+def test_connection_all(nas_ip: str, secret: str, timeout: int = 3):
+    """
+    Test semua port penting (1812, 1813, 3799).
+    Return dict hasil per port.
+    """
+    results = {}
+    for port in (1812, 1813, 3799):
+        try:
+            ok = _send_status_server(nas_ip, secret, port, timeout=timeout)
+            results[port] = "ok" if ok else "unexpected-reply"
+        except Exception as e:
+            results[port] = f"fail: {e}"
+    return results

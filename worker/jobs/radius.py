@@ -11,12 +11,7 @@ logger = logging.getLogger(__name__)
 # antrian retry disconnect sementara (bisa dipindah ke Redis/DB kalau mau durable)
 retry_queue = []
  
-
 def check_nas_status():
-    """
-    Periksa semua MikrotikRouter aktif di DB, test koneksi RADIUS,
-    lalu simpan hasil ke nas_status_logs.
-    """
     db: Session = SessionLocal()
     try:
         routers = db.query(models.router.MikrotikRouter).filter(
@@ -25,38 +20,25 @@ def check_nas_status():
         ).all()
 
         for r in routers:
-            status = "fail"
-            message = None
-            try:
-                ok = coa.test_connection(str(r.mgmt_ip), r.radius_secret)
-                if ok:
-                    status = "ok"
+            res = coa.test_connection_all(str(r.mgmt_ip), r.radius_secret)
+            for port, status in res.items():
+                if status == "ok":
+                    logger.info(f"[NAS check] {r.name} ({r.mgmt_ip}:{port}) ✅ OK")
                 else:
-                    message = "Unexpected reply"
-            except Exception as e:
-                message = str(e)
+                    logger.warning(f"[NAS check] {r.name} ({r.mgmt_ip}:{port}) ❌ {status}")
 
-            # log ke console
-            if status == "ok":
-                logger.info(f"[NAS check] {r.name} ({r.mgmt_ip}) ✅ OK")
-            else:
-                logger.warning(f"[NAS check] {r.name} ({r.mgmt_ip}) ❌ {message}")
-
-            # simpan ke DB
-            log = models.nas_status_log.NasStatusLog(
-                router_id=r.id,
-                status=status,
-                message=message
-            )
-            db.add(log)
+                # simpan ke DB
+                log = models.nas_status_log.NasStatusLog(
+                    router_id=r.id,
+                    status="ok" if status == "ok" else "fail",
+                    message=f"port {port}: {status}"
+                )
+                db.add(log)
 
         db.commit()
-
-    except Exception as e:
-        logger.exception(f"[NAS check] ERROR: {e}")
-        db.rollback()
     finally:
         db.close()
+
 
 
 
