@@ -3,7 +3,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from sched import scheduler
 from apscheduler.schedulers.asyncio import AsyncIOScheduler 
-from worker.jobs import customer_billing, billing, radius
+from worker.jobs import customer_billing, billing
 from datetime import datetime, timedelta
 
 # 🔹 konfigurasi logging dengan rotasi harian
