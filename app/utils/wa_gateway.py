@@ -87,6 +87,14 @@ def format_invoice_paid_message(invoice, user, profile):
     )
     return msg
 
+def format_invoice_rollback_message(invoice, user):
+    msg = (
+        f"Halo {user.full_name or user.username},\n"
+        f"⚠️ Pembayaran pada invoice {invoice.id} telah dibatalkan.\n\n"
+        f"Layanan internet Anda kembali dalam status *SUSPEND*.\n"
+        f"Silakan hubungi admin jika ada kesalahan.\n"
+    )
+    return msg
 
 def format_reminder_active_until(user, profile):
     due = user.active_until.strftime("%d-%m-%Y") if user.active_until else "-"

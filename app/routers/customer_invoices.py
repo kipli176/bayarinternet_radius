@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timedelta
 from sqlalchemy import text
-from app.utils.wa_gateway import send_whatsapp, format_invoice_paid_message, format_invoice_unpaid_message
+from app.utils.wa_gateway import format_invoice_rollback_message, send_whatsapp, format_invoice_paid_message, format_invoice_unpaid_message, format_invoice_rollback_message
 from app.utils.time import add_months_keep_dom  # helper untuk tambah bulan
 from app.utils.responses import success_response, error_response
 
@@ -18,16 +18,7 @@ import logging
 logger = logging.getLogger("app.routers.customer_invoices")
 
 router = APIRouter()
-
-def _add_months_keep_dom(base_date, months: int):
-    """Tambah bulan mempertahankan day-of-month. Clamp ke akhir bulan kalau DOM tidak ada."""
-    from calendar import monthrange
-    y, m = base_date.year, base_date.month
-    m += months
-    y += (m - 1) // 12
-    m = ((m - 1) % 12) + 1
-    day = min(base_date.day, monthrange(y, m)[1])
-    return base_date.replace(year=y, month=m, day=day)
+ 
 
 # ➕ buat customer invoice
 # Default (1 bulan):
@@ -85,7 +76,7 @@ def create_customer_invoice(
         base_date = datetime.utcnow().date()
 
     period_start = datetime.combine(base_date, datetime.min.time())
-    period_end = datetime.combine(_add_months_keep_dom(base_date, months), datetime.min.time())
+    period_end = datetime.combine(add_months_keep_dom(base_date, months), datetime.min.time())
 
     # cek duplikat invoice
     existing = db.query(models.customer_invoice.CustomerInvoice).filter(
@@ -182,13 +173,11 @@ def update_customer_invoice(
         invoice.status = "paid"
         invoice.paid_at = datetime.utcnow()
 
-        if user:
+        if user and profile:
             old_status = user.status
 
-            # extend masa aktif ke invoice.period_end
+            # extend masa aktif ke akhir periode invoice
             user.active_until = invoice.period_end.date()
-
-            # aktifkan kembali jika suspended
             if user.status == "suspended":
                 user.status = "active"
 
@@ -196,7 +185,7 @@ def update_customer_invoice(
             db.commit()
             db.refresh(user)
 
-            # disconnect session lama
+            # 🔌 disconnect supaya session lama terputus
             if user.status != old_status:
                 routers = db.query(models.router.MikrotikRouter).filter(
                     models.router.MikrotikRouter.reseller_id == reseller.id,
@@ -205,12 +194,17 @@ def update_customer_invoice(
                 ).all()
                 for r in routers:
                     try:
-                        coa.disconnect_user(user.username, str(r.mgmt_ip), r.radius_secret)
+                        result = coa.disconnect_user(
+                            username=user.username,
+                            nas_ip=str(r.mgmt_ip),
+                            secret=r.radius_secret,
+                        )
+                        print(f"Disconnect {user.username} @ {r.mgmt_ip}: {result}")
                     except Exception as e:
-                        print(f"Disconnect failed {user.username} @ {r.mgmt_ip}: {e}")
+                        print(f"Failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
 
-            # kirim WA konfirmasi pembayaran
-            if user.phone and profile:
+            # 📲 kirim WA konfirmasi pembayaran
+            if user.phone:
                 try:
                     msg = format_invoice_paid_message(invoice, user=user, profile=profile)
                     send_whatsapp(user.phone, msg)
@@ -226,31 +220,44 @@ def update_customer_invoice(
         invoice.paid_at = None
 
         if user:
-            # kembalikan active_until ke sebelum invoice berlaku
+            old_status = user.status
+
+            # kembalikan masa aktif ke sebelum invoice ini berlaku
             rollback_date = (invoice.period_start - timedelta(days=1)).date()
             user.active_until = rollback_date
-
-            # suspend user lagi
             user.status = "suspended"
 
             db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
             db.commit()
             db.refresh(user)
 
-            # kirim WA info rollback (opsional)
+            # 🔌 disconnect supaya user langsung terputus
+            if user.status != old_status:
+                routers = db.query(models.router.MikrotikRouter).filter(
+                    models.router.MikrotikRouter.reseller_id == reseller.id,
+                    models.router.MikrotikRouter.deleted_at.is_(None),
+                    models.router.MikrotikRouter.is_active.is_(True),
+                ).all()
+                for r in routers:
+                    try:
+                        result = coa.disconnect_user(
+                            username=user.username,
+                            nas_ip=str(r.mgmt_ip),
+                            secret=r.radius_secret,
+                        )
+                        print(f"Rollback disconnect {user.username} @ {r.mgmt_ip}: {result}")
+                    except Exception as e:
+                        print(f"Rollback failed disconnect {user.username} @ {r.mgmt_ip}: {e}")
+
+            # 📲 kirim WA info rollback
             if user.phone:
                 try:
-                    msg = (
-                        f"Halo {user.full_name or user.username},\n"
-                        f"⚠️ Pembayaran pada invoice {invoice.id} telah dibatalkan.\n\n"
-                        f"Layanan Anda kembali dalam status *SUSPEND*.\n"
-                        f"Silakan hubungi admin jika ada kesalahan.\n"
-                    )
+                    msg = format_invoice_rollback_message(invoice, user=user)
                     send_whatsapp(user.phone, msg)
                 except Exception as e:
                     logger.error(f"[update_customer_invoice] WA rollback gagal ke {user.username}: {e}")
 
-    # audit & simpan
+    # audit & simpan perubahan invoice
     db.execute(text("SELECT set_config('app.current_user', :uid, true)"), {"uid": str(reseller.id)})
     db.commit()
     db.refresh(invoice)
