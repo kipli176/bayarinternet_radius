@@ -14,8 +14,8 @@ class CustomerInvoice(Base, TimestampMixin):
     user_id = Column(UUID(as_uuid=True), ForeignKey("ppp_users.id", ondelete="CASCADE"), nullable=False)
     profile_id = Column(UUID(as_uuid=True), ForeignKey("ppp_profiles.id", ondelete="SET NULL"), nullable=False)
 
-    period_start = Column(Date(timezone=True), nullable=False)
-    period_end = Column(Date(timezone=True), nullable=False)
+    period_start = Column(Date, nullable=False)
+    period_end = Column(Date, nullable=False)
 
     amount = Column(Numeric(12, 2), nullable=False)
     status = Column(String, nullable=False, default="unpaid")   # draft, sent, paid, overdue
