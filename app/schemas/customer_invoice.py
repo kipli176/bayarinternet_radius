@@ -1,19 +1,19 @@
 # app/schemas/customer_invoice.py
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 from uuid import UUID
 from decimal import Decimal
 
 class CustomerInvoiceBase(BaseModel):
-    period_start: datetime
-    period_end: datetime
+    period_start: date
+    period_end: date
     amount: Decimal
 
 class CustomerInvoiceCreate(BaseModel):
     user_id: UUID
     months: int = 1                          # default 1 bulan
-    period_start: Optional[datetime] = None  # opsional; kalau None dihitung otomatis
+    period_start: Optional[date] = None  # opsional; kalau None dihitung otomatis
     meta: Optional[dict] = None              # detail untuk nota (opsional)
 
 class CustomerInvoiceUpdate(BaseModel):
