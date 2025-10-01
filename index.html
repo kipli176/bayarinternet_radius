@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Aplikasi Kasir Mini Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- LOGIN PAGE -->
+    <section id="loginPage" class="flex-1 flex items-center justify-center p-6">
+      <div class="bg-white shadow rounded-xl w-full max-w-sm p-6">
+        <h2 class="text-xl font-bold text-center text-teal-600 mb-4">Login</h2>
+        <form id="loginForm">
+          <input id="loginEmail" type="email" placeholder="Email" class="w-full border rounded-lg p-3 mb-3" required />
+          <input id="loginPassword" type="password" placeholder="Password" class="w-full border rounded-lg p-3 mb-4" required />
+          <button id="loginBtn" type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg flex items-center justify-center gap-2">
+            <span>Masuk</span>
+            <span id="loginSpinner" class="hidden animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
+          </button>
+        </form>
+        <p class="text-sm text-center mt-3">Belum punya akun? <a href="#" class="text-teal-600 font-semibold" onclick="goTo('registerPage')">Daftar</a>
+        </p>
+      </div>
+    </section>
+    <!-- REGISTER PAGE -->
+    <section id="registerPage" class="hidden flex-1 flex items-center justify-center p-6">
+      <div class="bg-white shadow rounded-xl w-full max-w-sm p-6">
+        <h2 class="text-xl font-bold text-center text-teal-600 mb-4">Register</h2>
+        <form id="registerForm">
+          <input id="regName" type="text" placeholder="Nama" class="w-full border rounded-lg p-3 mb-3" required />
+          <input id="regCompany" type="text" placeholder="Perusahaan" class="w-full border rounded-lg p-3 mb-3" required />
+          <input id="regEmail" type="email" placeholder="Email" class="w-full border rounded-lg p-3 mb-3" required />
+          <input id="regPassword" type="password" placeholder="Password" class="w-full border rounded-lg p-3 mb-3" required />
+          <input id="regPhone" type="text" placeholder="Telepon" class="w-full border rounded-lg p-3 mb-3" required />
+          <textarea id="regAlamat" placeholder="Alamat" class="w-full border rounded-lg p-3 mb-4" required></textarea>
+          <button id="registerBtn" type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg flex items-center justify-center gap-2">
+            <span>Daftar</span>
+            <span id="registerSpinner" class="hidden animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
+          </button>
+        </form>
+        <p class="text-sm text-center mt-3">Sudah punya akun? <a href="#" class="text-teal-600 font-semibold" onclick="goTo('loginPage')">Login</a>
+        </p>
+      </div>
+    </section>
+    <!-- BASE PAGE -->
+    <section id="basePage" class="hidden flex-1 flex flex-col">
+      <!-- HERO -->
+      <header class="bg-teal-600 text-white p-5 rounded-b-3xl shadow-md">
+        <div class="flex items-center justify-between">
+          <h1 class="text-lg font-bold">
+            <span class="bg-white text-teal-600 px-0 py-0.5 rounded">Bayar</span>Inter.net
+          </h1>
+          <span class="text-xs opacity-90">v1.1.0</span>
+        </div>
+        <div class="mt-3">
+          <p class="text-sm">Pendapatan Hari ini</p>
+          <p class="text-lg font-semibold">Rp. 0</p>
+        </div>
+      </header>
+      <!-- MAIN CONTENT -->
+      <main id="mainContent" class="flex-1 p-4 -mt-6">
+      <!-- Card Reseller -->
+      <div class="bg-white rounded-xl shadow p-4 mb-5">
+        <div id="resellerCard" class="flex items-start gap-3"> 
+        </div>
+      </div>
+  <!-- Default: Grid Menu -->
+  <div id="gridMenu" class="grid grid-cols-2 gap-4">
+    <a onclick="loadPage('router')" class="bg-gray-50 border rounded-xl p-4 flex flex-col items-center hover:shadow cursor-pointer">📡<span class="mt-2 text-sm">Router</span></a>
+    <a onclick="loadPage('paket')" class="bg-gray-50 border rounded-xl p-4 flex flex-col items-center hover:shadow cursor-pointer">📦<span class="mt-2 text-sm">Paket</span></a>
+    <a onclick="loadPage('pelanggan')" class="bg-gray-50 border rounded-xl p-4 flex flex-col items-center hover:shadow cursor-pointer">👥<span class="mt-2 text-sm">Pelanggan</span></a>
+    <a onclick="loadPage('tagihan')" class="bg-gray-50 border rounded-xl p-4 flex flex-col items-center hover:shadow cursor-pointer">💳<span class="mt-2 text-sm">Tagihan</span></a>
+    <a onclick="loadPage('monitoring')" class="bg-gray-50 border rounded-xl p-4 flex flex-col items-center hover:shadow cursor-pointer">📊<span class="mt-2 text-sm">Monitoring</span></a>
+    <a onclick="loadPage('log')" class="bg-gray-50 border rounded-xl p-4 flex flex-col items-center hover:shadow cursor-pointer">📝<span class="mt-2 text-sm">Log</span></a>
+  </div>
+
+  <!-- Container Paket -->
+  <div id="paketPage" class="hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Daftar Paket</h2>
+      <button onclick="openModal('tambahPaket')" class="bg-teal-600 text-white px-4 py-2 rounded-lg">+ Tambah Paket</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="p-2 border">Nama</th>
+            <th class="p-2 border">Harga</th>
+            <th class="p-2 border">Rate</th>
+            <th class="p-2 border">Burst</th>
+            <th class="p-2 border">Priority</th>
+            <th class="p-2 border">Status</th>
+            <th class="p-2 border">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="paketTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <!-- Pelanggan Page -->
+<div id="pelangganPage" class="hidden">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-lg font-bold">Daftar Pelanggan</h2>
+    <button onclick="openModal('tambahPelanggan')" class="bg-teal-600 text-white px-4 py-2 rounded-lg">
+      + Tambah Pelanggan
+    </button>
+  </div>
+
+  <!-- Filter Status -->
+  <div class="mb-3">
+    <select id="pelangganFilter" onchange="loadPelangganTable()" class="border rounded p-2">
+      <option value="">Semua Status</option>
+      <option value="active">Aktif</option>
+      <option value="suspended">Suspended</option>
+    </select>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm border">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="p-2 border">Username</th>
+          <th class="p-2 border">Nama Lengkap</th>
+          <th class="p-2 border">Email</th>
+          <th class="p-2 border">Telepon</th>
+          <th class="p-2 border">Alamat</th>
+          <th class="p-2 border">Status</th>
+          <th class="p-2 border">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="pelangganTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+
+      <div class="p-4">
+  <button id="mainActionBtn" 
+          class="fixed bottom-6 right-6 bg-teal-600 text-white font-semibold py-4 px-6 rounded-full shadow-xl hover:bg-teal-700">
+    Transaksi
+  </button>
+</div>
+    </section>
+    <!-- MODAL WRAPPER -->
+    <div id="modalWrapper" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl shadow-xl w-96 p-6 relative">
+        <button onclick="closeModal()" class="absolute top-2 right-2 text-gray-500">✖</button>
+        <div id="modalContent"></div>
+      </div>
+    </div>
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed top-4 right-4 space-y-2 z-50"></div>
+    <script>
+        function updateMainButton(mode) {
+  const btn = document.getElementById("mainActionBtn");
+  if (!btn) return;
+
+  if (mode === "dashboard") {
+    btn.textContent = "Transaksi";
+    btn.onclick = () => openModal("transaksi");
+  } else {
+    btn.textContent = "⬅️ Back";
+    btn.onclick = () => {
+  document.getElementById("gridMenu").classList.remove("hidden");
+  document.getElementById("paketPage").classList.add("hidden");
+  
+  updateMainButton("dashboard");
+  renderResellerCard();
+};
+
+
+  }
+}
+
+      function openModal(type) {
+        const modal = document.getElementById("modalWrapper");
+        const content = document.getElementById("modalContent");
+        modal.classList.remove("hidden");
+        if (type === "profil") {
+          const reseller = JSON.parse(localStorage.getItem("reseller_detail"));
+          if (!reseller) return;
+          content.innerHTML = `
+            
+					<h3 class="text-lg font-bold text-teal-600 mb-3">Edit Profil Reseller</h3>
+					<form>
+						<input type="text" placeholder="Nama" class="w-full border rounded-lg p-3 mb-3" value="${reseller.name}">
+							<input type="text" placeholder="Perusahaan" class="w-full border rounded-lg p-3 mb-3" value="${reseller.company_name}">
+								<input type="email" placeholder="Email" class="w-full border rounded-lg p-3 mb-3" value="${reseller.email}">
+									<input type="password" placeholder="Password" class="w-full border rounded-lg p-3 mb-3" value="">
+										<input type="text" placeholder="Telepon" class="w-full border rounded-lg p-3 mb-3" value="${reseller.phone}">
+											<textarea placeholder="Alamat" class="w-full border rounded-lg p-3 mb-4">${reseller.alamat}</textarea>
+											<button type="button" class="w-full bg-teal-600 text-white py-3 rounded-lg">Simpan</button>
+										</form>
+          `;
+        }
+        if (type === "transaksi") {
+          content.innerHTML = `
+          
+										<h3 class="text-lg font-bold text-teal-600 mb-3">Transaksi Baru</h3>
+										<form>
+											<input type="text" placeholder="Nama Produk" class="w-full border rounded-lg p-3 mb-3">
+												<input type="number" placeholder="Jumlah" class="w-full border rounded-lg p-3 mb-3">
+													<input type="number" placeholder="Harga" class="w-full border rounded-lg p-3 mb-4">
+														<button type="button" class="w-full bg-teal-600 text-white py-3 rounded-lg">Simpan</button>
+													</form>
+        `;
+        }
+        if(type === "tambahPaket"){
+  content.innerHTML = `
+    <h3 class="text-lg font-bold text-teal-600 mb-3">Tambah Paket</h3>
+    <form id="paketForm">
+      <input id="paketName" type="text" placeholder="Nama Paket" class="w-full border rounded-lg p-3 mb-3" required>
+      <input id="paketPrice" type="number" placeholder="Harga" class="w-full border rounded-lg p-3 mb-3" required>
+      <input id="paketRateUp" type="text" placeholder="Rate Up (contoh: 3M)" class="w-full border rounded-lg p-3 mb-3" required>
+      <input id="paketRateDown" type="text" placeholder="Rate Down (contoh: 3M)" class="w-full border rounded-lg p-3 mb-3" required>
+      <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg">Simpan</button>
+    </form>
+  `;
+  
+  document.getElementById("paketForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    await createPaket();
+  });
+}
+if(type === "tambahPelanggan"){
+  content.innerHTML = `
+    <h3 class="text-lg font-bold text-teal-600 mb-3">Tambah Pelanggan</h3>
+    <form id="pelangganForm">
+      <input id="pelUsername" type="text" placeholder="Username" class="w-full border rounded-lg p-3 mb-3" required>
+      <input id="pelPassword" type="password" placeholder="Password" class="w-full border rounded-lg p-3 mb-3" required>
+      <input id="pelProfileId" type="text" placeholder="Profile ID" class="w-full border rounded-lg p-3 mb-3" required>
+      <input id="pelFullName" type="text" placeholder="Nama Lengkap" class="w-full border rounded-lg p-3 mb-3" required>
+      <input id="pelEmail" type="email" placeholder="Email" class="w-full border rounded-lg p-3 mb-3" required>
+      <input id="pelPhone" type="text" placeholder="Telepon" class="w-full border rounded-lg p-3 mb-3" required>
+      <textarea id="pelAlamat" placeholder="Alamat" class="w-full border rounded-lg p-3 mb-3" required></textarea>
+      <input id="pelActiveUntil" type="date" class="w-full border rounded-lg p-3 mb-3" required>
+      <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg">Simpan</button>
+    </form>
+  `;
+
+  document.getElementById("pelangganForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    await createPelanggan();
+  });
+}
+
+      }
+
+      function closeModal() {
+        document.getElementById("modalWrapper").classList.add("hidden");
+      }
+
+      function goTo(pageId) {
+        document.querySelectorAll("section").forEach(sec => sec.classList.add("hidden"));
+        document.getElementById(pageId).classList.remove("hidden");
+      }
+
+      function showToast(message, type = "success") {
+        const container = document.getElementById("toastContainer");
+        const toast = document.createElement("div");
+        // Warna berdasarkan type
+        const color = type === "success" ? "bg-green-500" : type === "error" ? "bg-red-500" : "bg-yellow-500";
+        toast.className = `${color} text-white px-4 py-2 rounded shadow transition transform duration-300`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        // Animasi muncul
+        setTimeout(() => {
+          toast.classList.add("opacity-0", "-translate-y-2");
+        }, 2500); // mulai fade out setelah 2.5s
+        // Hapus dari DOM
+        setTimeout(() => {
+          toast.remove();
+        }, 3000);
+      }
+      const registerForm = document.getElementById("registerForm");
+      const registerBtn = document.getElementById("registerBtn");
+      const registerSpinner = document.getElementById("registerSpinner");
+      registerForm.addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const name = document.getElementById("regName").value;
+        const company = document.getElementById("regCompany").value;
+        const email = document.getElementById("regEmail").value;
+        const password = document.getElementById("regPassword").value;
+        const phone = document.getElementById("regPhone").value;
+        const alamat = document.getElementById("regAlamat").value;
+        const payload = {
+          name: name,
+          company_name: company,
+          email: email,
+          phone: phone,
+          alamat: alamat,
+          logo: "https://cdn.example.com/logo.png",
+          password: password,
+          price_per_user: 500,
+          currency: "IDR",
+          volume_pricing: {
+            "100": 0.1,
+            "200": 0.2,
+            "500": 0.3
+          }
+        };
+        // disable button + tampilkan spinner
+        registerBtn.disabled = true;
+        registerSpinner.classList.remove("hidden");
+        try {
+          const res = await fetch("https://api.bayarinter.net/auth/register", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.status === "success") {
+            showToast("✅ " + data.message, "success");
+            // Auto-fill login form
+            document.querySelector("#loginPage input[type=email]").value = email;
+            document.querySelector("#loginPage input[type=password]").value = password;
+            // Pindah ke login page
+            goTo("loginPage");
+          } else {
+            showToast("❌ Gagal register: " + data.message, "error");
+          }
+        } catch (err) {
+          showToast("⚠️ Error koneksi ke server:" + err.message, "error");
+        } finally {
+          // reset button
+          registerBtn.disabled = false;
+          registerSpinner.classList.add("hidden");
+        }
+      });
+      const loginForm = document.getElementById("loginForm");
+      const loginBtn = document.getElementById("loginBtn");
+      const loginSpinner = document.getElementById("loginSpinner");
+      loginForm.addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const email = document.getElementById("loginEmail").value;
+        const password = document.getElementById("loginPassword").value;
+        // disable button + show spinner
+        loginBtn.disabled = true;
+        loginSpinner.classList.remove("hidden");
+        const payload = {
+          email: email,
+          password: password
+        };
+        try {
+          const res = await fetch("https://api.bayarinter.net/auth/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.status === "success") {
+            showToast("✅ " + data.message, "success");
+            // simpan token ke localStorage
+            localStorage.setItem("access_token", data.data.access_token);
+            localStorage.setItem("token_type", data.data.token_type);
+            // pindah ke basePage
+            goTo("basePage");
+            loadDashboard();
+          } else {
+            showToast("❌ Gagal login: " + data.message, "error");
+          }
+        } catch (err) {
+          showToast("⚠️ Error koneksi: " + err.message, "error");
+        } finally {
+          // reset button
+          loginBtn.disabled = false;
+          loginSpinner.classList.add("hidden");
+        }
+      });
+      async function loadDashboard() {
+        const token = localStorage.getItem("access_token");
+        if (!token) return;
+        
+  // kalau sudah ada di cache, langsung render saja
+  if (localStorage.getItem("reseller_detail")) {
+    renderResellerCard();
+    return;
+  }
+        try {
+          // fetch summary
+          const resSummary = await fetch("https://api.bayarinter.net/resellers/me/summary", {
+            headers: {
+              "Authorization": "Bearer " + token
+            }
+          });
+          const summary = await resSummary.json();
+          if (summary.status === "success") {
+            const resellerId = summary.data.id;
+            // fetch detail reseller
+            const resDetail = await fetch(`https://api.bayarinter.net/resellers/${resellerId}`, {
+              headers: {
+                "Authorization": "Bearer " + token
+              }
+            });
+            const detail = await resDetail.json();
+            if (detail.status === "success") {
+              const r = detail.data;
+              // isi card reseller
+              document.getElementById("resellerCard").innerHTML = `
+          
+													<div class="h-10 w-10 rounded-lg bg-amber-500 flex items-center justify-center text-white font-bold">
+            ${r.company_name.substring(0,2).toUpperCase()}
+          </div>
+													<div class="flex-1">
+														<h2 class="font-semibold">${r.company_name}</h2>
+														<p class="text-sm text-gray-500">${r.alamat}</p>
+													</div>
+													<button onclick="openModal('profil')" class="text-teal-600">✏️</button>
+        `;
+              // simpan detail reseller agar bisa dipakai di modal
+              localStorage.setItem("reseller_detail", JSON.stringify(r));
+              renderResellerCard();
+            }
+          }
+        } catch (err) {
+          showToast("⚠️ Error load dashboard: " + err.message, "error");
+        }
+      }
+      async function loadPage(page){
+  document.getElementById("gridMenu").classList.add("hidden");
+  document.getElementById("paketPage").classList.add("hidden");
+
+  if(page === "paket"){
+    document.getElementById("paketPage").classList.remove("hidden");
+    await loadPaketTable();
+  }
+  if(page === "pelanggan"){
+    document.getElementById("pelangganPage").classList.remove("hidden");
+    await loadPelangganTable();
+  }
+  updateMainButton("subpage");
+}
+function renderResellerCard() {
+  const reseller = JSON.parse(localStorage.getItem("reseller_detail"));
+  const resellerCard = document.getElementById("resellerCard");
+  if (!reseller || !resellerCard) return;
+
+  resellerCard.innerHTML = `
+    <div class="h-10 w-10 rounded-lg bg-amber-500 flex items-center justify-center text-white font-bold">
+      ${reseller.company_name.substring(0,2).toUpperCase()}
+    </div>
+    <div class="flex-1">
+      <h2 class="font-semibold">${reseller.company_name}</h2>
+      <p class="text-sm text-gray-500">${reseller.alamat}</p>
+    </div>
+    <button onclick="openModal('profil')" class="text-teal-600">✏️</button>
+  `;
+}
+
+async function loadPaketTable(){
+  const token = localStorage.getItem("access_token");
+  const tbody = document.getElementById("paketTableBody");
+  tbody.innerHTML = `<tr><td colspan="7" class="text-center p-3">Loading...</td></tr>`;
+
+  try {
+    const res = await fetch("https://api.bayarinter.net/profiles", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+    const data = await res.json();
+
+    if(data.status === "success"){
+      tbody.innerHTML = "";
+      data.data.forEach(p => {
+        tbody.innerHTML += `
+          <tr>
+            <td class="border p-2">${p.name}</td>
+            <td class="border p-2">Rp ${p.price.toLocaleString()}</td>
+            <td class="border p-2">${p.rate_limit_up}/${p.rate_limit_down}</td>
+            <td class="border p-2">${p.burst_limit_up}/${p.burst_limit_down}</td>
+            <td class="border p-2">${p.priority}</td>
+            <td class="border p-2">${p.is_active ? "✅ Aktif" : "❌ Nonaktif"}</td>
+            <td class="border p-2 space-x-2">
+              <button onclick="editPaket('${p.id}')" class="px-2 py-1 bg-yellow-500 text-white rounded">Edit</button>
+              <button onclick="deletePaket('${p.id}')" class="px-2 py-1 bg-red-500 text-white rounded">Hapus</button>
+            </td>
+          </tr>
+        `;
+      });
+    } else {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center p-3">Tidak ada data</td></tr>`;
+    }
+  } catch(err){
+    showToast("⚠️ Error load paket: " + err.message, "error");
+  }
+}
+async function createPaket(){
+  const token = localStorage.getItem("access_token");
+
+  const payload = {
+    name: document.getElementById("paketName").value,
+    price: parseInt(document.getElementById("paketPrice").value),
+    rate_limit_up: document.getElementById("paketRateUp").value,
+    rate_limit_down: document.getElementById("paketRateDown").value,
+    burst_limit_up: "6M",
+    burst_limit_down: "6M",
+    burst_threshold_up: "2M",
+    burst_threshold_down: "2M",
+    burst_time_up: 10,
+    burst_time_down: 10,
+    min_rate_up: "1M",
+    min_rate_down: "1M",
+    priority: 8,
+    group_name: null,
+    auto_pool: true
+  };
+
+  try {
+    const res = await fetch("https://api.bayarinter.net/profiles", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data.status === "success"){
+      showToast("✅ " + data.message, "success");
+      closeModal();
+      loadPaketTable();
+    } else {
+      showToast("❌ " + data.message, "error");
+    }
+  } catch(err){
+    showToast("⚠️ Error tambah paket: " + err.message, "error");
+  }
+}
+async function editPaket(id){
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`https://api.bayarinter.net/profiles/${id}`, {
+    headers: { "Authorization": "Bearer " + token }
+  });
+  const data = await res.json();
+
+  if(data.status === "success"){
+    const p = data.data;
+    openModal("editPaket");
+    document.getElementById("modalContent").innerHTML = `
+      <h3 class="text-lg font-bold text-teal-600 mb-3">Edit Paket</h3>
+      <form id="editPaketForm">
+        <input id="editName" type="text" class="w-full border rounded-lg p-3 mb-3" value="${p.name}">
+        <input id="editPrice" type="number" class="w-full border rounded-lg p-3 mb-3" value="${p.price}">
+        <input id="editRateUp" type="text" class="w-full border rounded-lg p-3 mb-3" value="${p.rate_limit_up}">
+        <input id="editRateDown" type="text" class="w-full border rounded-lg p-3 mb-3" value="${p.rate_limit_down}">
+        <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg">Update</button>
+      </form>
+    `;
+
+    document.getElementById("editPaketForm").addEventListener("submit", async e=>{
+      e.preventDefault();
+      await updatePaket(id);
+    });
+  }
+}
+
+async function updatePaket(id){
+  const token = localStorage.getItem("access_token");
+  const payload = {
+    name: document.getElementById("editName").value,
+    price: parseInt(document.getElementById("editPrice").value),
+    rate_limit_up: document.getElementById("editRateUp").value,
+    rate_limit_down: document.getElementById("editRateDown").value,
+    burst_limit_up: "25M",
+    burst_limit_down: "25M",
+    burst_threshold_up: "15M",
+    burst_threshold_down: "15M",
+    burst_time_up: 60,
+    burst_time_down: 60,
+    min_rate_up: "10M",
+    min_rate_down: "10M",
+    priority: 8,
+    auto_pool: true,
+    is_active: true
+  };
+
+  const res = await fetch(`https://api.bayarinter.net/profiles/${id}`, {
+    method: "PATCH",
+    headers: { 
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if(data.status === "success"){
+    showToast("✅ " + data.message, "success");
+    closeModal();
+    loadPaketTable();
+  } else {
+    showToast("❌ " + data.message, "error");
+  }
+}
+
+async function deletePaket(id){
+  if(!confirm("Yakin ingin hapus paket ini?")) return;
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`https://api.bayarinter.net/profiles/${id}`, {
+    method: "DELETE",
+    headers: { "Authorization": "Bearer " + token }
+  });
+  const data = await res.json();
+  if(data.status === "success"){
+    showToast("✅ " + data.message, "success");
+    loadPaketTable();
+  } else {
+    showToast("❌ " + data.message, "error");
+  }
+}
+async function loadPelangganTable(){
+  const token = localStorage.getItem("access_token");
+  const tbody = document.getElementById("pelangganTableBody");
+  const filter = document.getElementById("pelangganFilter").value;
+  
+  tbody.innerHTML = `<tr><td colspan="7" class="text-center p-3">Loading...</td></tr>`;
+
+  try {
+    let url = "https://api.bayarinter.net/users";
+    if (filter) url += `?status=${filter}`;
+
+    const res = await fetch(url, {
+      headers: { "Authorization": "Bearer " + token }
+    });
+    const data = await res.json();
+
+    if(data.status === "success"){
+      tbody.innerHTML = "";
+      data.data.forEach(u => {
+        tbody.innerHTML += `
+          <tr>
+            <td class="border p-2">${u.username}</td>
+            <td class="border p-2">${u.full_name}</td>
+            <td class="border p-2">${u.email}</td>
+            <td class="border p-2">${u.phone}</td>
+            <td class="border p-2">${u.alamat}</td>
+            <td class="border p-2">${u.status}</td>
+            <td class="border p-2 space-x-2">
+              <button onclick="editPelanggan('${u.id}')" class="px-2 py-1 bg-yellow-500 text-white rounded">Edit</button>
+              <button onclick="deletePelanggan('${u.id}')" class="px-2 py-1 bg-red-500 text-white rounded">Hapus</button>
+            </td>
+          </tr>
+        `;
+      });
+    } else {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center p-3">Tidak ada data</td></tr>`;
+    }
+  } catch(err){
+    showToast("⚠️ Error load pelanggan: " + err.message, "error");
+  }
+}
+async function createPelanggan(){
+  const token = localStorage.getItem("access_token");
+  const payload = {
+    username: document.getElementById("pelUsername").value,
+    password: document.getElementById("pelPassword").value,
+    profile_id: document.getElementById("pelProfileId").value,
+    full_name: document.getElementById("pelFullName").value,
+    email: document.getElementById("pelEmail").value,
+    phone: document.getElementById("pelPhone").value,
+    alamat: document.getElementById("pelAlamat").value,
+    active_until: document.getElementById("pelActiveUntil").value,
+  };
+
+  try {
+    const res = await fetch("https://api.bayarinter.net/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data.status === "success"){
+      showToast("✅ " + data.message, "success");
+      closeModal();
+      loadPelangganTable();
+    } else {
+      showToast("❌ " + data.message, "error");
+    }
+  } catch(err){
+    showToast("⚠️ Error tambah pelanggan: " + err.message, "error");
+  }
+}
+async function editPelanggan(id){
+  openModal("editPelanggan");
+  document.getElementById("modalContent").innerHTML = `
+    <h3 class="text-lg font-bold text-teal-600 mb-3">Edit Status Pelanggan</h3>
+    <form id="editPelangganForm">
+      <select id="editStatus" class="w-full border rounded-lg p-3 mb-3">
+        <option value="active">Active</option>
+        <option value="suspended">Suspended</option>
+      </select>
+      <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg">Update</button>
+    </form>
+  `;
+
+  document.getElementById("editPelangganForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    await updatePelanggan(id);
+  });
+}
+
+async function updatePelanggan(id){
+  const token = localStorage.getItem("access_token");
+  const payload = { status: document.getElementById("editStatus").value };
+
+  try {
+    const res = await fetch(`https://api.bayarinter.net/users/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data.status === "success"){
+      showToast("✅ " + data.message, "success");
+      closeModal();
+      loadPelangganTable();
+    } else {
+      showToast("❌ " + data.message, "error");
+    }
+  } catch(err){
+    showToast("⚠️ Error update pelanggan: " + err.message, "error");
+  }
+}
+async function deletePelanggan(id){
+  if(!confirm("Yakin ingin hapus pelanggan ini?")) return;
+  const token = localStorage.getItem("access_token");
+
+  try {
+    const res = await fetch(`https://api.bayarinter.net/users/${id}`, {
+      method: "DELETE",
+      headers: { "Authorization": "Bearer " + token }
+    });
+    const data = await res.json();
+    if(data.status === "success"){
+      showToast("✅ " + data.message, "success");
+      loadPelangganTable();
+    } else {
+      showToast("❌ " + data.message, "error");
+    }
+  } catch(err){
+    showToast("⚠️ Error hapus pelanggan: " + err.message, "error");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const token = localStorage.getItem("access_token");
+  
+  if (token) {
+    try {
+      // cek apakah token masih valid
+      const res = await fetch("https://api.bayarinter.net/resellers/me/summary", {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        // Token masih valid, langsung ke dashboard
+        goTo("basePage");
+        loadDashboard();
+      } else {
+        // Token invalid, hapus & tampilkan login
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("token_type");
+        goTo("loginPage");
+      }
+    } catch (err) {
+      console.error("Error cek token:", err);
+      goTo("loginPage");
+    }
+  } else {
+    // Tidak ada token, tampilkan login
+    goTo("loginPage");
+  }
+});
+
+    </script>
+  </body>
+</html>

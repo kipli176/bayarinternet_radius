@@ -75,8 +75,16 @@ def create_customer_invoice(
     else:
         base_date = datetime.utcnow().date()
 
-    period_start = datetime.combine(base_date, datetime.min.time())
-    period_end = datetime.combine(add_months_keep_dom(base_date, months), datetime.min.time())
+    period_start = base_date
+    period_end = add_months_keep_dom(base_date, months)
+
+    # if user.active_until:
+    #     base_date = user.active_until
+    # else:
+    #     base_date = datetime.utcnow().date()
+
+    # period_start = datetime.combine(base_date, datetime.min.time())
+    # period_end = datetime.combine(add_months_keep_dom(base_date, months), datetime.min.time())
 
     # cek duplikat invoice
     existing = db.query(models.customer_invoice.CustomerInvoice).filter(

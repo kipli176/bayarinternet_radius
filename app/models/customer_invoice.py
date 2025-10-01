@@ -1,6 +1,6 @@
 # app/models/customer_invoice.py
 import uuid
-from sqlalchemy import Column, String, ForeignKey, Numeric, DateTime
+from sqlalchemy import Column, String, ForeignKey, Numeric, DateTime, Date
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.database import Base
 from .mixins import TimestampMixin
@@ -14,8 +14,8 @@ class CustomerInvoice(Base, TimestampMixin):
     user_id = Column(UUID(as_uuid=True), ForeignKey("ppp_users.id", ondelete="CASCADE"), nullable=False)
     profile_id = Column(UUID(as_uuid=True), ForeignKey("ppp_profiles.id", ondelete="SET NULL"), nullable=False)
 
-    period_start = Column(DateTime(timezone=True), nullable=False)
-    period_end = Column(DateTime(timezone=True), nullable=False)
+    period_start = Column(Date(timezone=True), nullable=False)
+    period_end = Column(Date(timezone=True), nullable=False)
 
     amount = Column(Numeric(12, 2), nullable=False)
     status = Column(String, nullable=False, default="unpaid")   # draft, sent, paid, overdue

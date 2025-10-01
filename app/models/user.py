@@ -1,6 +1,6 @@
 # app/models/user.py
 import uuid
-from sqlalchemy import Column, String, ForeignKey, DateTime, Boolean, UniqueConstraint
+from sqlalchemy import Column, String, ForeignKey, DateTime, Boolean, UniqueConstraint, Date
 from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
 from .mixins import TimestampMixin, SoftDeleteMixin
@@ -21,7 +21,7 @@ class PPPUser(Base, TimestampMixin, SoftDeleteMixin):
     alamat = Column(String)   # ✅ sesuai kolom baru di DB
 
     status = Column(String, nullable=False, default="active")   # active, suspended, expired
-    active_until = Column(DateTime(timezone=True))              # expiry date
+    active_until = Column(Date)            # expiry date
 
     is_active = Column(Boolean, nullable=False, default=True)
 
